@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🏔️ Alaska Survival</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{overflow:hidden;background:#0D1B2A;font-family:'Nunito',sans-serif;user-select:none;}
+    canvas{display:block;position:fixed;top:0;left:0;}
+
+    /* ── HUD ──────────────────────────────────────────────────── */
+    #hud{
+      position:fixed;top:0;left:0;right:0;z-index:20;
+      background:rgba(13,27,42,0.88);backdrop-filter:blur(8px);
+      border-bottom:2px solid rgba(255,255,255,0.1);
+      padding:8px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    }
+    .hstat{display:flex;align-items:center;gap:6px;font-size:0.82rem;}
+    .bwrap{width:72px;height:11px;background:rgba(255,255,255,0.12);border-radius:6px;overflow:hidden;}
+    .bfill{height:100%;border-radius:6px;transition:width 0.4s;}
+    .hb{background:linear-gradient(90deg,#b71c1c,#ef5350);}
+    .wb{background:linear-gradient(90deg,#1565C0,#64B5F6);}
+    .fb{background:linear-gradient(90deg,#E65100,#FF8F00,#FFD54F);}
+    .hlbl{color:#aaa;font-weight:800;font-size:0.78rem;}
+    .hval{color:#FFD54F;font-weight:900;font-size:0.82rem;min-width:26px;}
+    #day-badge{
+      margin-left:auto;background:rgba(255,255,255,0.1);border-radius:20px;
+      padding:4px 12px;color:white;font-weight:900;font-size:0.8rem;
+      border:1px solid rgba(255,255,255,0.18);white-space:nowrap;
+    }
+
+    /* ── Actions ─────────────────────────────────────────────── */
+    #actions{
+      position:fixed;bottom:0;left:0;right:0;z-index:20;
+      background:rgba(13,27,42,0.9);backdrop-filter:blur(8px);
+      border-top:2px solid rgba(255,255,255,0.1);
+      padding:9px 12px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap;
+    }
+    .abtn{
+      padding:9px 16px;border-radius:30px;cursor:pointer;border:none;
+      font-family:'Nunito',sans-serif;font-weight:900;font-size:0.88rem;
+      transition:all 0.12s;display:flex;align-items:center;gap:5px;
+    }
+    .abtn:active{transform:scale(0.94);}
+    .abtn:disabled{opacity:0.38;cursor:not-allowed;transform:none!important;}
+    .bwood{background:#5D4037;color:#FFD54F;box-shadow:0 4px 0 #3E2723;}
+    .bfire{background:#E65100;color:white;box-shadow:0 4px 0 #BF360C;}
+    .bfood{background:#2E7D32;color:white;box-shadow:0 4px 0 #1B5E20;}
+    .badge{background:rgba(0,0,0,0.3);border-radius:10px;padding:1px 7px;font-size:0.76rem;}
+
+    /* ── Fight panel ─────────────────────────────────────────── */
+    #fight-panel{
+      display:none;position:fixed;inset:0;z-index:40;
+      background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);
+      align-items:center;justify-content:center;flex-direction:column;
+    }
+    #fight-panel.show{display:flex;}
+    .fbox{
+      background:rgba(13,27,42,0.97);border:2px solid rgba(255,80,80,0.35);
+      border-radius:24px;padding:24px 32px;text-align:center;max-width:360px;width:92%;
+      box-shadow:0 0 50px rgba(255,50,50,0.25);
+    }
+    .aemoji{font-size:5rem;line-height:1;animation:ashake 0.25s infinite alternate;}
+    @keyframes ashake{from{transform:translateX(-5px) rotate(-4deg);}to{transform:translateX(5px) rotate(4deg);}}
+    .ftitle{font-size:1.4rem;font-weight:900;color:#FF5252;margin:8px 0 3px;}
+    .fsub{font-size:0.82rem;color:#aaa;margin-bottom:12px;}
+    .ahpwrap{width:100%;height:16px;background:rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+    .ahpfill{height:100%;background:linear-gradient(90deg,#b71c1c,#ef5350);border-radius:8px;transition:width 0.1s;}
+    .fbtns{display:flex;gap:12px;justify-content:center;}
+    .bfight{
+      padding:13px 26px;background:#C62828;color:white;border:none;border-radius:30px;
+      cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.08rem;
+      box-shadow:0 5px 0 #7F0000;transition:transform 0.08s,box-shadow 0.08s;
+      animation:pfight 0.65s infinite alternate;
+    }
+    @keyframes pfight{
+      from{box-shadow:0 5px 0 #7F0000,0 0 0 rgba(198,40,40,0);}
+      to{box-shadow:0 5px 0 #7F0000,0 0 22px rgba(255,80,80,0.6);}
+    }
+    .bfight:active{transform:translateY(4px);box-shadow:0 1px 0 #7F0000;}
+    .bflee{
+      padding:13px 18px;background:rgba(255,255,255,0.08);color:#ccc;
+      border:2px solid rgba(255,255,255,0.2);border-radius:30px;cursor:pointer;
+      font-family:'Nunito',sans-serif;font-weight:800;font-size:0.92rem;
+    }
+    .bflee:hover{background:rgba(255,255,255,0.16);}
+
+    /* ── Toasts ──────────────────────────────────────────────── */
+    #toasts{
+      position:fixed;top:62px;left:50%;transform:translateX(-50%);
+      z-index:30;display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none;
+    }
+    .toast{
+      background:rgba(13,27,42,0.94);color:white;padding:7px 18px;border-radius:30px;
+      font-weight:800;font-size:0.88rem;border:1px solid rgba(255,255,255,0.14);
+      animation:tin 0.28s ease;white-space:nowrap;
+    }
+    @keyframes tin{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+
+    /* ── Title screen ────────────────────────────────────────── */
+    #title-screen{
+      position:fixed;inset:0;z-index:50;
+      display:flex;align-items:center;justify-content:center;
+      flex-direction:column;gap:14px;background:rgba(13,27,42,0.94);
+    }
+    #title-screen.gone{display:none;}
+    .tlogo{font-size:4rem;line-height:1;}
+    .th1{font-size:clamp(1.8rem,5vw,3rem);font-weight:900;color:#FFD54F;text-align:center;line-height:1.2;}
+    .tsub{color:#90CAF9;font-size:0.95rem;font-weight:700;text-align:center;max-width:340px;line-height:1.5;}
+    .tgoals{
+      background:rgba(255,255,255,0.06);border-radius:16px;
+      padding:13px 22px;color:#ccc;font-size:0.85rem;font-weight:700;
+      text-align:left;line-height:1.85;max-width:310px;
+    }
+    .bstart{
+      padding:15px 38px;background:#E65100;color:white;border:none;border-radius:40px;
+      cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.15rem;
+      box-shadow:0 6px 0 #BF360C;transition:transform 0.1s,box-shadow 0.1s;
+      animation:pfight 0.9s infinite alternate;
+    }
+    .bstart:active{transform:translateY(5px);box-shadow:0 1px 0 #BF360C;}
+
+    /* ── End screen ──────────────────────────────────────────── */
+    #end-screen{
+      display:none;position:fixed;inset:0;z-index:50;
+      align-items:center;justify-content:center;flex-direction:column;gap:13px;
+      background:rgba(13,27,42,0.95);
+    }
+    #end-screen.show{display:flex;}
+    .eicon{font-size:5rem;}
+    .etitle{font-size:2.1rem;font-weight:900;color:white;text-align:center;}
+    .esub{color:#aaa;font-size:0.95rem;font-weight:700;text-align:center;max-width:320px;line-height:1.5;}
+    .escore{font-size:1.4rem;font-weight:900;color:#FFD54F;}
+    .brestart{
+      padding:13px 34px;background:#1565C0;color:white;border:none;border-radius:40px;
+      cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.05rem;
+      box-shadow:0 5px 0 #0D47A1;transition:transform 0.1s,box-shadow 0.1s;margin-top:6px;
+    }
+    .brestart:active{transform:translateY(4px);box-shadow:0 1px 0 #0D47A1;}
+  </style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hstat">
+    <span class="hlbl">❤️</span>
+    <div class="bwrap"><div class="bfill hb" id="hb" style="width:100%"></div></div>
+    <span class="hval" id="hv">100</span>
+  </div>
+  <div class="hstat">
+    <span class="hlbl">🌡️</span>
+    <div class="bwrap"><div class="bfill wb" id="wb" style="width:80%"></div></div>
+    <span class="hval" id="wv">80</span>
+  </div>
+  <div class="hstat">
+    <span class="hlbl">🔥</span>
+    <div class="bwrap"><div class="bfill fb" id="fb" style="width:0%"></div></div>
+    <span class="hval" id="fv" style="color:#888;">Out</span>
+  </div>
+  <div id="day-badge">📅 Day 1 · Dawn</div>
+</div>
+
+<!-- Actions -->
+<div id="actions">
+  <button class="abtn bwood" id="btn-wood" onclick="gatherWood()">
+    🪵 Gather Wood <span class="badge" id="wood-ct">x5</span>
+  </button>
+  <button class="abtn bfire" id="btn-fire" onclick="feedFire()">
+    🔥 <span id="fire-lbl">Build Fire</span> <span class="badge">−2🪵</span>
+  </button>
+  <button class="abtn bfood" id="btn-food" onclick="eatBerries()" disabled>
+    🫐 Eat Berries <span class="badge" id="food-ct">x0</span>
+  </button>
+</div>
+
+<!-- Fight overlay -->
+<div id="fight-panel">
+  <div class="fbox">
+    <div class="aemoji" id="fight-emoji">🐻</div>
+    <div class="ftitle" id="fight-title">BEAR ATTACK!</div>
+    <div class="fsub">Click FIGHT! as fast as you can!</div>
+    <div class="ahpwrap"><div class="ahpfill" id="ahp" style="width:100%"></div></div>
+    <div class="fbtns">
+      <button class="bfight" onclick="fightClick()">👊 FIGHT!</button>
+      <button class="bflee"  onclick="flee()">🏃 Flee!</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toasts"></div>
+
+<!-- Title -->
+<div id="title-screen">
+  <div class="tlogo">🏔️🌲❄️</div>
+  <div class="th1">Alaska Survival</div>
+  <div class="tsub">You're stranded in the Alaskan wilderness.<br>Survive 3 days to be rescued by helicopter!</div>
+  <div class="tgoals">
+    🪵 Gather wood &amp; keep your campfire burning<br>
+    🔥 Fire keeps you warm and scares animals<br>
+    🐻 Fight off bears, wolves &amp; moose!<br>
+    🫐 Eat berries to restore your health<br>
+    ❄️ Survive all 3 days for rescue!
+  </div>
+  <button class="bstart" onclick="startGame()">🚁 START SURVIVING!</button>
+</div>
+
+<!-- End screen -->
+<div id="end-screen">
+  <div class="eicon" id="end-icon">💀</div>
+  <div class="etitle" id="end-title">You Didn't Make It</div>
+  <div class="esub" id="end-sub">The Alaskan wilderness claimed another adventurer.</div>
+  <div class="escore" id="end-score">Score: 0</div>
+  <button class="brestart" onclick="restartGame()">🔄 Try Again</button>
+</div>
+
+<script>
+'use strict';
+
+// ─── Canvas ───────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H, HUD_H, ACT_H;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  HUD_H = document.getElementById('hud').offsetHeight    || 52;
+  ACT_H = document.getElementById('actions').offsetHeight|| 60;
+  initStars();
+  initSnow();
+  buildTrees();
+}
+window.addEventListener('resize', resize);
+
+// ─── Sky colour keyframes ─────────────────────────────────────────────────────
+// t=0 noon, 0.48 sunset, 0.62 full-night, 0.85 still-night, 0.95 dawn, 1.0 noon
+const SKY = [
+  { t:0,    A:[91,184,245],  B:[200,234,255] },
+  { t:0.40, A:[55,130,200],  B:[144,200,249] },
+  { t:0.48, A:[220,100,60],  B:[255,155,90]  },
+  { t:0.56, A:[72,18,138],   B:[130,10,75]   },
+  { t:0.62, A:[13,27,42],    B:[26,35,126]   },
+  { t:0.85, A:[13,27,42],    B:[26,35,126]   },
+  { t:0.93, A:[72,18,138],   B:[130,10,75]   },
+  { t:0.97, A:[215,95,45],   B:[255,195,55]  },
+  { t:1.00, A:[91,184,245],  B:[200,234,255] },
+];
+
+function skyAt(t) {
+  let i=0;
+  while (i < SKY.length-1 && SKY[i+1].t <= t) i++;
+  const a=SKY[i], b=SKY[i+1];
+  const f=(t-a.t)/(b.t-a.t);
+  const L=(v,w)=>Math.round(v+(w-v)*f);
+  return {
+    A: a.A.map((v,j)=>L(v,b.A[j])),
+    B: a.B.map((v,j)=>L(v,b.B[j])),
+  };
+}
+
+function nightFactor(dt) {
+  if (dt<0.48) return 0;
+  if (dt<0.62) return (dt-0.48)/0.14;
+  if (dt<0.85) return 1;
+  if (dt<0.95) return 1-(dt-0.85)/0.10;
+  return 0;
+}
+
+// ─── Stars ────────────────────────────────────────────────────────────────────
+let stars=[];
+function initStars() {
+  stars = Array.from({length:110},()=>({
+    x:Math.random()*W, y: HUD_H+Math.random()*(H-HUD_H-ACT_H)*0.55,
+    r:0.4+Math.random()*1.6, tw:Math.random()*Math.PI*2,
+  }));
+}
+
+// ─── Snow particles ───────────────────────────────────────────────────────────
+let flakes=[];
+function initSnow() {
+  flakes=[];
+  const GY=H-ACT_H-70;
+  for (let i=0;i<80;i++) {
+    flakes.push({
+      x:Math.random()*W, y:HUD_H+Math.random()*(GY-HUD_H),
+      r:0.8+Math.random()*2.2, vy:0.5+Math.random()*1.5,
+      vx:(Math.random()-0.5)*0.6, phase:Math.random()*Math.PI*2,
+    });
+  }
+}
+
+// ─── Trees ────────────────────────────────────────────────────────────────────
+let trees=[];
+function buildTrees() {
+  const GY=H-ACT_H-70;
+  trees=[
+    {x:W*0.06,h:110,s:0.9},{x:W*0.15,h:90,s:0.85},{x:W*0.82,h:100,s:0.88},
+    {x:W*0.91,h:120,s:0.92},{x:W*0.02,h:75,s:0.8},{x:W*0.97,h:80,s:0.82},
+    {x:W*0.21,h:60,s:0.78},{x:W*0.77,h:70,s:0.8},
+  ];
+  trees.forEach(t=>{ t.base=GY; });
+}
+
+// ─── Fire particles ───────────────────────────────────────────────────────────
+let embers=[];
+function spawnEmbers(fx,fy) {
+  if (Math.random()<0.25) {
+    embers.push({x:fx+(Math.random()-0.5)*16, y:fy, vx:(Math.random()-0.5)*1.2,
+      vy:-(1+Math.random()*2), alpha:0.9, size:1.5+Math.random()*2.5, life:1});
+  }
+}
+function updateEmbers() {
+  for(let i=embers.length-1;i>=0;i--) {
+    const e=embers[i];
+    e.x+=e.vx; e.y+=e.vy; e.vy+=0.04; e.alpha-=0.025; e.life-=0.025;
+    if(e.alpha<=0) embers.splice(i,1);
+  }
+}
+
+// ─── Game state ───────────────────────────────────────────────────────────────
+const DAY_LEN = 60; // real seconds per full day cycle
+
+let G;
+function resetG() {
+  G = {
+    phase:'title',  // title|playing|fighting|win|dead
+    health:100, warmth:80,
+    wood:5, food:0,
+    fire:{ lit:false, fuel:0 },
+    dayTime:0.0,   // 0-1 within the cycle
+    dayNum:1,
+    clock:0,       // total elapsed seconds
+    score:0,
+    fight:null,    // { type,emoji,name,hp,maxHp,atkDmg,atkTimer }
+    approach:null, // { emoji,name,x,y,speed,hp,maxHp,atkDmg }
+    isStorm:false, stormTimer:0,
+    // event countdown timers
+    tAnimal: 22+Math.random()*14,
+    tWood:   22+Math.random()*18,
+    tFood:   32+Math.random()*22,
+    tStorm:  65+Math.random()*45,
+    // wood gather cooldown
+    woodCool:0,
+    // day transition state
+    lastCompletedDay:0,
+  };
+}
+resetG();
+
+// ─── HUD update ───────────────────────────────────────────────────────────────
+function updateHUD() {
+  const hp=Math.round(G.health), wp=Math.round(G.warmth), fp=G.fire.lit?Math.round(G.fire.fuel):0;
+  document.getElementById('hb').style.width=Math.max(0,hp)+'%';
+  document.getElementById('wb').style.width=Math.max(0,wp)+'%';
+  document.getElementById('fb').style.width=Math.max(0,fp)+'%';
+  document.getElementById('hv').textContent=Math.max(0,hp);
+  document.getElementById('wv').textContent=Math.max(0,wp);
+  const fv=document.getElementById('fv');
+  if (G.fire.lit && fp>0) { fv.textContent=fp+'%'; fv.style.color='#FFD54F'; }
+  else { fv.textContent='Out'; fv.style.color='#888'; }
+  document.getElementById('wood-ct').textContent='x'+G.wood;
+  document.getElementById('food-ct').textContent='x'+G.food;
+  document.getElementById('btn-food').disabled=(G.food<=0);
+
+  // Day badge
+  const dn=G.nightFactor>0.5?'🌙 Night':G.dayTime<0.12||G.dayTime>0.9?'🌅 Dawn':
+            G.dayTime>0.42?'🌆 Dusk':'☀️ Day';
+  const totalDays = Math.min(3, Math.ceil(G.clock/DAY_LEN+0.01));
+  document.getElementById('day-badge').textContent=`📅 Day ${totalDays} · ${dn}`;
+
+  document.getElementById('fire-lbl').textContent=G.fire.lit?'Feed Fire':'Build Fire';
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, color) {
+  const d=document.createElement('div');
+  d.className='toast';
+  d.textContent=msg;
+  if(color) d.style.borderColor=color;
+  const box=document.getElementById('toasts');
+  box.appendChild(d);
+  setTimeout(()=>{ d.style.transition='opacity 0.5s'; d.style.opacity='0'; setTimeout(()=>d.remove(),500); },2800);
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+function gatherWood() {
+  if (G.woodCool>0||G.wood>=15) return;
+  G.wood=Math.min(15,G.wood+2);
+  G.woodCool=5;
+  document.getElementById('btn-wood').disabled=true;
+  toast('🪵 Gathered 2 wood!');
+  updateHUD();
+}
+
+function feedFire() {
+  if (G.wood<2) { toast('❌ Not enough wood! Need 2 🪵','#FF5252'); return; }
+  G.wood-=2;
+  G.fire.lit=true;
+  G.fire.fuel=Math.min(100, G.fire.fuel+20);
+  toast('🔥 Fire fed! Feeling warmer...','#FF8F00');
+  updateHUD();
+}
+
+function eatBerries() {
+  if (G.food<=0) return;
+  G.food--;
+  G.health=Math.min(100,G.health+30);
+  toast('🫐 Ate berries! Health +30','#66BB6A');
+  updateHUD();
+}
+
+// ─── Fight ────────────────────────────────────────────────────────────────────
+const ANIMALS = [
+  { emoji:'🐻', name:'Grizzly Bear', hp:100, atkDmg:25, speed:35 },
+  { emoji:'🐺', name:'Wolf Pack',    hp:60,  atkDmg:15, speed:55 },
+  { emoji:'🦌', name:'Bull Moose',   hp:80,  atkDmg:18, speed:42 },
+];
+
+function triggerAnimal() {
+  if (G.approach||G.phase==='fighting') return;
+  const a=ANIMALS[Math.floor(Math.random()*ANIMALS.length)];
+  const GY=H-ACT_H-70;
+  const fromLeft=Math.random()<0.5;
+  G.approach={
+    emoji:a.emoji, name:a.name,
+    x:fromLeft?-80:W+80, y:GY-60,
+    speed:a.speed, hp:a.hp, maxHp:a.hp, atkDmg:a.atkDmg,
+  };
+  toast(`⚠️ ${a.emoji} ${a.name} approaching!`,'#FF5252');
+  G.tAnimal=22+Math.random()*18;
+}
+
+function openFight(a) {
+  G.approach=null;
+  G.phase='fighting';
+  G.fight={ emoji:a.emoji, name:a.name, hp:a.hp, maxHp:a.maxHp, atkDmg:a.atkDmg, atkTimer:0 };
+  document.getElementById('fight-emoji').textContent=a.emoji;
+  document.getElementById('fight-title').textContent=a.name.toUpperCase()+' ATTACK!';
+  document.getElementById('ahp').style.width='100%';
+  document.getElementById('fight-panel').classList.add('show');
+}
+
+function fightClick() {
+  if (!G.fight) return;
+  G.fight.hp=Math.max(0,G.fight.hp-15);
+  const pct=G.fight.hp/G.fight.maxHp*100;
+  document.getElementById('ahp').style.width=pct+'%';
+  if (G.fight.hp<=0) {
+    closeFight(true);
+  }
+}
+
+function flee() {
+  if (!G.fight) return;
+  const dmg=G.fight.atkDmg*2;
+  G.health=Math.max(0,G.health-dmg);
+  toast(`🏃 You fled! Took ${dmg} damage!`,'#FF8F00');
+  closeFight(false);
+}
+
+function closeFight(won) {
+  document.getElementById('fight-panel').classList.remove('show');
+  G.phase='playing';
+  if (won) {
+    toast(`✅ ${G.fight.emoji} drove away! +50 score`,'#66BB6A');
+    G.score+=50;
+  }
+  G.fight=null;
+  updateHUD();
+}
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+function triggerWoodCache() {
+  G.wood=Math.min(15,G.wood+3);
+  toast('🎁 You found a wood cache! +3 🪵');
+  updateHUD();
+}
+
+function triggerBerries() {
+  G.food=Math.min(3,G.food+1);
+  toast('🫐 You found berries! Eat them when injured.','#66BB6A');
+  updateHUD();
+}
+
+function triggerStorm() {
+  G.isStorm=true;
+  G.stormTimer=20+Math.random()*15;
+  toast('🌨️ Snowstorm! Warmth draining faster!','#90CAF9');
+}
+
+// ─── Win / Die ────────────────────────────────────────────────────────────────
+function win() {
+  G.phase='win';
+  G.score+=200;
+  document.getElementById('fight-panel').classList.remove('show');
+  document.getElementById('end-icon').textContent='🚁';
+  document.getElementById('end-title').textContent='You Survived!';
+  document.getElementById('end-sub').textContent='The rescue helicopter has spotted your signal fire! You made it through 3 days in the Alaskan wilderness!';
+  document.getElementById('end-score').textContent='Score: '+G.score;
+  document.getElementById('end-screen').classList.add('show');
+}
+
+function die(reason) {
+  G.phase='dead';
+  document.getElementById('fight-panel').classList.remove('show');
+  document.getElementById('end-icon').textContent='💀';
+  document.getElementById('end-title').textContent='You Didn\'t Make It';
+  document.getElementById('end-sub').textContent=reason+' You survived '+Math.floor(G.clock)+' seconds.';
+  document.getElementById('end-score').textContent='Score: '+G.score;
+  document.getElementById('end-screen').classList.add('show');
+}
+
+// ─── Start / Restart ──────────────────────────────────────────────────────────
+function startGame() {
+  document.getElementById('title-screen').classList.add('gone');
+  resetG();
+  G.phase='playing';
+  resize();
+  updateHUD();
+  toast('🏔️ Find wood and build a fire before dark!','#FFD54F');
+}
+
+function restartGame() {
+  document.getElementById('end-screen').classList.remove('show');
+  resetG();
+  G.phase='playing';
+  resize();
+  updateHUD();
+}
+
+// ─── Game update ─────────────────────────────────────────────────────────────
+function gameUpdate(dt) {
+  if (G.phase!=='playing'&&G.phase!=='fighting') return;
+
+  G.clock+=dt;
+  G.dayTime=(G.dayTime+dt/DAY_LEN)%1;
+  G.nightFactor=nightFactor(G.dayTime);
+
+  // Check day transitions
+  const daysElapsed=Math.floor(G.clock/DAY_LEN)+1;
+  if (daysElapsed>G.lastCompletedDay+1) {
+    G.lastCompletedDay=daysElapsed-1;
+    if (daysElapsed<=3) toast(`🌅 Day ${daysElapsed} begins! Keep going!`,'#FFD54F');
+  }
+  if (G.clock>=DAY_LEN*3) { win(); return; }
+
+  // Fire burndown
+  if (G.fire.lit) {
+    const burnRate = G.isStorm ? 1.0 : 0.55;
+    G.fire.fuel=Math.max(0,G.fire.fuel-burnRate*dt);
+    if (G.fire.fuel<=0) { G.fire.lit=false; toast('🔥 Fire went out! Brr...','#FF6D00'); }
+  }
+
+  // Warmth drain
+  let drain=3;
+  if (G.nightFactor>0.5) drain*=2.0;
+  if (G.isStorm) drain*=1.6;
+  if (G.fire.lit&&G.fire.fuel>0) drain*=0.25;
+  G.warmth=Math.max(0,G.warmth-drain*dt);
+
+  // Fire warmth recovery
+  if (G.fire.lit&&G.fire.fuel>0) G.warmth=Math.min(100,G.warmth+2.5*dt);
+
+  // Cold damage
+  if (G.warmth<=0) {
+    G.health=Math.max(0,G.health-8*dt);
+    if (Math.random()<dt*0.4) toast('🥶 Freezing! Build a fire NOW!','#90CAF9');
+  } else if (G.warmth<15&&Math.random()<dt*0.3) {
+    toast('❄️ Very cold! Feed the fire!','#64B5F6');
+  }
+
+  // Wood gather cooldown
+  if (G.woodCool>0) {
+    G.woodCool=Math.max(0,G.woodCool-dt);
+    if (G.woodCool<=0) document.getElementById('btn-wood').disabled=false;
+  }
+
+  // Storm timer
+  if (G.isStorm) { G.stormTimer-=dt; if (G.stormTimer<=0){ G.isStorm=false; toast('🌤️ Storm easing...'); } }
+
+  // Animal approach
+  if (G.approach) {
+    const a=G.approach;
+    const GY=H-ACT_H-70;
+    const TX=W/2+60, TY=GY-50;
+    const dx=TX-a.x, dy=TY-a.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    const spd=G.fire.lit&&G.fire.fuel>0 ? a.speed*0.45 : a.speed;
+    if (dist<45) { openFight(a); }
+    else { a.x+=dx/dist*spd*dt; a.y+=dy/dist*spd*dt; }
+  }
+
+  // Fight — animal attacks over time
+  if (G.phase==='fighting'&&G.fight) {
+    G.fight.atkTimer+=dt;
+    if (G.fight.atkTimer>=1.8) {
+      G.fight.atkTimer=0;
+      const d=G.fight.atkDmg;
+      G.health=Math.max(0,G.health-d);
+      toast(`${G.fight.emoji} bites for ${d} dmg!`,'#FF5252');
+    }
+  }
+
+  // Event timers
+  if (G.phase==='playing') {
+    G.tAnimal-=dt;
+    G.tWood-=dt;
+    G.tFood-=dt;
+    G.tStorm-=dt;
+    if (G.tAnimal<=0&&!G.approach) { triggerAnimal(); }
+    if (G.tWood<=0) { if(Math.random()<0.4) triggerWoodCache(); G.tWood=22+Math.random()*24; }
+    if (G.tFood<=0) { if(Math.random()<0.3) triggerBerries(); G.tFood=30+Math.random()*30; }
+    if (G.tStorm<=0&&!G.isStorm) { triggerStorm(); G.tStorm=70+Math.random()*55; }
+  }
+
+  // Low fire warning
+  if (G.fire.lit&&G.fire.fuel<20&&G.fire.fuel>0&&Math.random()<dt*0.3)
+    toast('🔥 Fire is dying! Add wood!','#FF8F00');
+
+  // Death checks
+  if (G.health<=0) { die('You were overwhelmed by the cold and wildlife.'); return; }
+  if (G.warmth<=0&&G.health<=0) { die('You froze to death.'); return; }
+
+  G.score=Math.max(G.score,Math.floor(G.clock*2));
+  updateHUD();
+}
+
+// ─── Drawing ──────────────────────────────────────────────────────────────────
+let tick=0;
+
+function drawSky(nf,dt) {
+  const c=skyAt(dt);
+  const rA=`rgb(${c.A})`, rB=`rgb(${c.B})`;
+  const GY=H-ACT_H-70;
+  const g=ctx.createLinearGradient(0,HUD_H,0,GY);
+  g.addColorStop(0,rA); g.addColorStop(1,rB);
+  ctx.fillStyle=g;
+  ctx.fillRect(0,HUD_H,W,GY-HUD_H);
+}
+
+function drawStars(nf) {
+  if(nf<=0.02) return;
+  for(const s of stars) {
+    const a=nf*(0.4+Math.sin(tick*0.04+s.tw)*0.6);
+    ctx.fillStyle=`rgba(255,255,255,${a})`;
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawMoon(nf) {
+  if(nf<0.1) return;
+  const GY=H-ACT_H-70;
+  const my=HUD_H+(GY-HUD_H)*0.18;
+  ctx.save(); ctx.globalAlpha=nf;
+  // Glow
+  const glow=ctx.createRadialGradient(W*0.15,my,0,W*0.15,my,50);
+  glow.addColorStop(0,'rgba(200,220,255,0.35)');
+  glow.addColorStop(1,'rgba(200,220,255,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(W*0.15,my,50,0,Math.PI*2); ctx.fill();
+  // Moon disc
+  ctx.fillStyle='#E8EAF6'; ctx.beginPath(); ctx.arc(W*0.15,my,22,0,Math.PI*2); ctx.fill();
+  // Crater shading
+  ctx.fillStyle='rgba(150,160,200,0.35)';
+  ctx.beginPath(); ctx.arc(W*0.15+6,my-5,8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W*0.15-7,my+4,5,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawSun(dt) {
+  const nf=nightFactor(dt);
+  if(nf>0.85) return;
+  const GY=H-ACT_H-70;
+  // Sun position arcs across the sky during day
+  const dayPhase = dt<0.5 ? dt/0.48 : 1-(dt-0.5)/0.5;
+  const sx=W*(0.1+dayPhase*0.8);
+  const sy=HUD_H+(GY-HUD_H)*(0.12+Math.sin(dayPhase*Math.PI)*0.1);
+  ctx.save(); ctx.globalAlpha=Math.max(0,1-nf*2);
+  const glow=ctx.createRadialGradient(sx,sy,0,sx,sy,55);
+  glow.addColorStop(0,'rgba(255,230,50,0.5)');
+  glow.addColorStop(1,'rgba(255,230,50,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(sx,sy,55,0,Math.PI*2); ctx.fill();
+  // Rays
+  ctx.rotate && ctx.translate(sx,sy);
+  ctx.translate(sx,sy); ctx.rotate(tick*0.003);
+  ctx.strokeStyle='rgba(255,215,0,0.5)'; ctx.lineWidth=2.5; ctx.lineCap='round';
+  for(let i=0;i<12;i++){
+    const a=i/12*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a)*40,Math.sin(a)*40);
+    ctx.lineTo(Math.cos(a)*58,Math.sin(a)*58); ctx.stroke();
+  }
+  ctx.translate(-sx,-sy); ctx.rotate(-tick*0.003);
+  ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(0,0,32,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,180,0.4)';
+  ctx.beginPath(); ctx.ellipse(-10,-10,16,12,-0.4,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawAurora(nf) {
+  if(nf<0.15) return;
+  const GY=H-ACT_H-70;
+  ctx.save(); ctx.globalAlpha=nf*0.55;
+  const bands=[
+    { dy:0.12, col:'0,255,120', amp:28, freq:0.007, spd:0.9 },
+    { dy:0.19, col:'0,180,255', amp:22, freq:0.010, spd:1.3 },
+    { dy:0.26, col:'160,0,255', amp:18, freq:0.013, spd:0.7 },
+  ];
+  for(const b of bands) {
+    const by=HUD_H+(GY-HUD_H)*b.dy;
+    const g=ctx.createLinearGradient(0,by-28,0,by+28);
+    g.addColorStop(0,`rgba(${b.col},0)`);
+    g.addColorStop(0.5,`rgba(${b.col},0.45)`);
+    g.addColorStop(1,`rgba(${b.col},0)`);
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.moveTo(0,by);
+    for(let x=0;x<=W;x+=8) ctx.lineTo(x,by+Math.sin(x*b.freq+tick*b.spd*0.012)*b.amp);
+    for(let x=W;x>=0;x-=8) ctx.lineTo(x,by+Math.sin(x*b.freq+tick*b.spd*0.012)*b.amp+44);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawMountains() {
+  const GY=H-ACT_H-70;
+  // Layer 1 — far, light
+  ctx.fillStyle='#1E3040';
+  ctx.beginPath(); ctx.moveTo(0,GY);
+  const pts1=[[0.0,0.62],[0.08,0.48],[0.18,0.55],[0.28,0.40],[0.40,0.52],[0.52,0.35],
+              [0.62,0.50],[0.72,0.42],[0.82,0.55],[0.92,0.45],[1.0,0.58],[1.0,1.0],[0,1.0]];
+  pts1.forEach(([rx,ry])=>ctx.lineTo(rx*W,HUD_H+(GY-HUD_H)*ry));
+  ctx.closePath(); ctx.fill();
+  // Layer 2 — mid
+  ctx.fillStyle='#162535';
+  ctx.beginPath(); ctx.moveTo(0,GY);
+  const pts2=[[0,0.72],[0.10,0.58],[0.22,0.68],[0.34,0.50],[0.46,0.65],[0.56,0.48],
+              [0.68,0.62],[0.80,0.52],[0.90,0.68],[1.0,0.60],[1.0,1],[0,1]];
+  pts2.forEach(([rx,ry])=>ctx.lineTo(rx*W,HUD_H+(GY-HUD_H)*ry));
+  ctx.closePath(); ctx.fill();
+}
+
+function drawTree(t) {
+  const {x,base,h,s} = t;
+  const layers=4, w=h*0.55*s;
+  // Trunk
+  ctx.fillStyle='#4E342E'; ctx.fillRect(x-4*s,base-14*s,8*s,14*s);
+  for(let i=0;i<layers;i++) {
+    const lh=h*s/layers;
+    const y=base-i*lh*0.72;
+    const lw=w*(1-i/layers*0.55);
+    ctx.fillStyle=`rgb(${22+i*9},${58+i*12},${28+i*9})`;
+    ctx.beginPath();
+    ctx.moveTo(x,y-lh*1.25); ctx.lineTo(x-lw/2,y); ctx.lineTo(x+lw/2,y);
+    ctx.closePath(); ctx.fill();
+    // Snow cap
+    ctx.fillStyle='rgba(220,235,255,0.82)';
+    ctx.beginPath();
+    ctx.moveTo(x,y-lh*1.25+3); ctx.lineTo(x-lw*0.38,y-lh*0.28); ctx.lineTo(x+lw*0.38,y-lh*0.28);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawGround() {
+  const GY=H-ACT_H-70;
+  const g=ctx.createLinearGradient(0,GY,0,H-ACT_H);
+  g.addColorStop(0,'#D0E8FF'); g.addColorStop(0.4,'#B8D4F0'); g.addColorStop(1,'#8AACCC');
+  ctx.fillStyle=g; ctx.fillRect(0,GY,W,H-ACT_H-GY);
+  // Snow surface highlight
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fillRect(0,GY,W,10);
+  // Small snow bumps
+  ctx.fillStyle='rgba(200,230,255,0.5)';
+  for(let i=0;i<8;i++) {
+    const bx=(i+0.5)/8*W;
+    ctx.beginPath(); ctx.ellipse(bx,GY+5,W/18,14,0,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawFire() {
+  const GY=H-ACT_H-70;
+  const fx=W/2, fy=GY-8;
+  const lit=G.fire.lit&&G.fire.fuel>0;
+  // Logs
+  ctx.save();
+  ctx.strokeStyle='#5D4037'; ctx.lineWidth=9; ctx.lineCap='round';
+  ctx.save(); ctx.translate(fx,fy); ctx.rotate(0.42);
+  ctx.beginPath(); ctx.moveTo(-22,0); ctx.lineTo(22,0); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.translate(fx,fy); ctx.rotate(-0.42);
+  ctx.beginPath(); ctx.moveTo(-22,0); ctx.lineTo(22,0); ctx.stroke(); ctx.restore();
+  ctx.restore();
+
+  if (!lit) { // dead coals
+    ctx.fillStyle='rgba(100,60,20,0.6)';
+    ctx.beginPath(); ctx.ellipse(fx,fy,18,8,0,0,Math.PI*2); ctx.fill();
+    return;
+  }
+
+  // Ground glow
+  const intensity=0.28+Math.sin(tick*0.12)*0.06;
+  const glow=ctx.createRadialGradient(fx,fy,0,fx,fy,110);
+  glow.addColorStop(0,`rgba(255,140,40,${intensity})`);
+  glow.addColorStop(1,'rgba(255,80,0,0)');
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(fx,fy,110,0,Math.PI*2); ctx.fill();
+
+  // Flames
+  const fph=G.fire.fuel/100;
+  const fH=(30+fph*20)+Math.sin(tick*0.18)*8;
+  for(let i=0;i<6;i++) {
+    const off=(i-2.5)*7;
+    const fh=fH*(0.55+Math.sin(tick*0.14+i*1.1)*0.45);
+    const fw=6+Math.sin(tick*0.1+i*0.8)*3;
+    const fg=ctx.createLinearGradient(fx+off,fy,fx+off,fy-fh);
+    fg.addColorStop(0,'#FF6F00'); fg.addColorStop(0.5,'#FF8F00'); fg.addColorStop(1,'rgba(255,220,50,0)');
+    ctx.fillStyle=fg;
+    ctx.beginPath(); ctx.ellipse(fx+off,fy-fh*0.42,fw,fh*0.52,0,0,Math.PI*2); ctx.fill();
+    // Inner white-yellow core
+    const fg2=ctx.createLinearGradient(fx+off,fy,fx+off,fy-fh*0.55);
+    fg2.addColorStop(0,'rgba(255,240,180,0.9)'); fg2.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=fg2;
+    ctx.beginPath(); ctx.ellipse(fx+off,fy-fh*0.28,fw*0.4,fh*0.32,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // Embers
+  spawnEmbers(fx,fy);
+  for(const e of embers) {
+    ctx.fillStyle=`rgba(255,${100+Math.random()*80},0,${e.alpha})`;
+    ctx.beginPath(); ctx.arc(e.x,e.y,e.size,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawCharacter() {
+  const GY=H-ACT_H-70;
+  const cx=W/2-70, cy=GY;
+  const breathe=Math.sin(tick*0.06)*2;
+  ctx.save(); ctx.translate(cx,cy+breathe);
+
+  // Legs
+  ctx.fillStyle='#263238';
+  ctx.beginPath(); ctx.ellipse(-10,-12,9,18,0.1,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(10,-12,9,18,-0.1,0,Math.PI*2); ctx.fill();
+  // Boots
+  ctx.fillStyle='#4E342E';
+  ctx.beginPath(); ctx.ellipse(-11,5,13,7,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(11,5,13,7,0,0,Math.PI*2); ctx.fill();
+  // Body (puffy blue jacket)
+  ctx.fillStyle='#1565C0';
+  ctx.beginPath(); ctx.ellipse(0,-36,19,26,0,0,Math.PI*2); ctx.fill();
+  // Jacket trim
+  ctx.fillStyle='#0D47A1';
+  ctx.beginPath(); ctx.ellipse(0,-22,19,7,0,0,Math.PI*2); ctx.fill();
+  // Arms
+  ctx.fillStyle='#1565C0';
+  ctx.beginPath(); ctx.ellipse(-26,-38,9,17,-0.35,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(26,-38,9,17,0.35,0,Math.PI*2); ctx.fill();
+  // Mittens
+  ctx.fillStyle='#C62828';
+  ctx.beginPath(); ctx.arc(-28,-24,9,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(28,-24,9,0,Math.PI*2); ctx.fill();
+  // Scarf
+  ctx.fillStyle='#FF6F00';
+  ctx.beginPath(); ctx.ellipse(0,-60,21,7,0,0,Math.PI*2); ctx.fill();
+  // Head skin
+  ctx.fillStyle='#FFCC80';
+  ctx.beginPath(); ctx.arc(0,-75,17,0,Math.PI*2); ctx.fill();
+  // Beanie
+  ctx.fillStyle='#C62828';
+  ctx.beginPath(); ctx.arc(0,-86,15,Math.PI,0);
+  ctx.fillRect(-15,-86,30,13); ctx.fill();
+  // Pompom
+  ctx.fillStyle='#FFD54F';
+  ctx.beginPath(); ctx.arc(0,-98,6,0,Math.PI*2); ctx.fill();
+  // Eyes
+  ctx.fillStyle='#333';
+  ctx.beginPath(); ctx.arc(-5,-76,2.8,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(5,-76,2.8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(-4,-77,1.1,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6,-77,1.1,0,Math.PI*2); ctx.fill();
+  // Smile
+  ctx.strokeStyle='#333'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(0,-71,5.5,0.2,Math.PI-0.2); ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawApproach() {
+  if (!G.approach) return;
+  const a=G.approach;
+  ctx.save();
+  // Warning pulse
+  const pulse=0.7+Math.sin(tick*0.18)*0.3;
+  ctx.globalAlpha=pulse;
+  ctx.font='68px serif';
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillText(a.emoji,a.x,a.y);
+  // HP bar above animal
+  const bw=70, bh=8;
+  const pct=a.hp/a.maxHp;
+  ctx.globalAlpha=0.85;
+  ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(a.x-bw/2,a.y-90,bw,bh);
+  ctx.fillStyle=pct>0.5?'#66BB6A':pct>0.25?'#FFA726':'#EF5350';
+  ctx.fillRect(a.x-bw/2,a.y-90,bw*pct,bh);
+  ctx.restore();
+
+  // Danger label
+  ctx.save(); ctx.globalAlpha=pulse;
+  ctx.font='bold 14px Nunito,sans-serif'; ctx.textAlign='center'; ctx.fillStyle='#FF5252';
+  const GY=H-ACT_H-70;
+  ctx.fillText(`⚠️ ${a.name} incoming!`,W/2,HUD_H+30);
+  ctx.restore();
+}
+
+function drawSnow() {
+  const GY=H-ACT_H-70;
+  const storm=G.isStorm;
+  const windX=Math.sin(tick*0.008)*0.5;
+  ctx.fillStyle='rgba(220,235,255,0.85)';
+  for(const f of flakes) {
+    f.y+=f.vy*(storm?2.2:1)*0.6;
+    f.x+=f.vx*(storm?2.5:1)*0.5+windX;
+    f.phase+=0.02;
+    f.x+=Math.sin(f.phase)*0.3;
+    if(f.y>GY) { f.y=HUD_H-5; f.x=Math.random()*W; }
+    if(f.x<0) f.x=W; if(f.x>W) f.x=0;
+    ctx.beginPath(); ctx.arc(f.x,f.y,f.r*(storm?1.3:1),0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawStormOverlay() {
+  if(!G.isStorm) return;
+  ctx.fillStyle=`rgba(0,20,50,${0.18+Math.sin(tick*0.06)*0.05})`;
+  ctx.fillRect(0,HUD_H,W,H-HUD_H-ACT_H);
+}
+
+function drawScene() {
+  const dt=G.phase==='title'?0.05:G.dayTime||0.05;
+  const nf=nightFactor(dt);
+  G.nightFactor=nf;
+
+  drawSky(nf,dt);
+  drawStars(nf);
+  drawMoon(nf);
+  drawSun(dt);
+  drawAurora(nf);
+  drawMountains();
+  for(const t of trees) drawTree(t);
+  drawGround();
+  drawFire();
+  updateEmbers();
+  drawCharacter();
+  drawApproach();
+  drawSnow();
+  drawStormOverlay();
+}
+
+// ─── Main loop ────────────────────────────────────────────────────────────────
+let lastTime=null;
+function loop(ts) {
+  if(!lastTime) lastTime=ts;
+  const dt=Math.min((ts-lastTime)/1000,0.12);
+  lastTime=ts;
+  tick++;
+
+  ctx.clearRect(0,0,W,H);
+  drawScene();
+  gameUpdate(dt);
+
+  requestAnimationFrame(loop);
+}
+
+// Boot
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
