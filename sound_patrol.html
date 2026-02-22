@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🐕 Sound Patrol</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{overflow:hidden;background:#0A0E1A;font-family:'Nunito',sans-serif;user-select:none;-webkit-user-select:none;}
+    canvas{display:block;position:fixed;top:0;left:0;touch-action:none;}
+
+    /* ── HUD ─────────────────────────────────────────────────── */
+    #hud{
+      position:fixed;top:0;left:0;right:0;z-index:20;
+      background:rgba(10,14,26,0.92);backdrop-filter:blur(8px);
+      border-bottom:2px solid rgba(255,255,255,0.08);
+      padding:7px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    }
+    .hitem{display:flex;align-items:center;gap:6px;font-size:0.82rem;color:#ccc;font-weight:800;}
+    .hval{color:#FFD54F;font-weight:900;}
+    .meter-wrap{display:flex;align-items:center;gap:4px;}
+    .meter-label{font-size:0.72rem;color:#7986CB;font-weight:800;}
+    .meter-bar{width:38px;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden;}
+    .meter-fill{height:100%;border-radius:5px;transition:width 0.12s;}
+    .lm{background:linear-gradient(90deg,#3F51B5,#7986CB);}
+    .rm{background:linear-gradient(90deg,#7986CB,#3F51B5);}
+    .htemp{font-size:0.85rem;font-weight:900;transition:color 0.3s;}
+    #timer-val{color:#90CAF9;}
+    .hright{margin-left:auto;display:flex;align-items:center;gap:10px;}
+    #snd-btn{
+      background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+      border-radius:20px;padding:4px 12px;cursor:pointer;color:white;
+      font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:800;
+    }
+
+    /* ── D-Pad controls ──────────────────────────────────────── */
+    #dpad{
+      position:fixed;bottom:0;left:0;right:0;z-index:20;
+      background:rgba(10,14,26,0.9);border-top:2px solid rgba(255,255,255,0.08);
+      padding:8px 0;display:flex;justify-content:center;align-items:center;gap:6px;
+    }
+    .drow{display:flex;flex-direction:column;align-items:center;gap:5px;}
+    .dbtn{
+      width:50px;height:50px;border-radius:12px;
+      background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);
+      cursor:pointer;font-size:1.3rem;line-height:1;
+      display:flex;align-items:center;justify-content:center;
+      transition:all 0.1s;
+    }
+    .dbtn:active,.dbtn.pressed{background:rgba(100,130,255,0.35);border-color:#7986CB;transform:scale(0.92);}
+    #sniff-btn{
+      width:60px;height:60px;border-radius:50%;
+      background:linear-gradient(135deg,#4A148C,#6A1B9A);
+      border:3px solid #9C27B0;
+      cursor:pointer;font-size:1.1rem;line-height:1.1;
+      display:flex;align-items:center;justify-content:center;flex-direction:column;
+      color:white;font-weight:900;font-size:0.65rem;letter-spacing:0.5px;
+      box-shadow:0 0 15px rgba(156,39,176,0.4);
+      transition:all 0.12s;
+    }
+    #sniff-btn:active{transform:scale(0.92);box-shadow:0 0 8px rgba(156,39,176,0.3);}
+    #sniff-btn.cooldown{opacity:0.45;cursor:not-allowed;}
+    #sniff-icon{font-size:1.4rem;}
+
+    /* ── Screens ─────────────────────────────────────────────── */
+    .screen{
+      position:fixed;inset:0;z-index:50;
+      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;
+      background:rgba(10,14,26,0.96);
+    }
+    .screen.hidden{display:none;}
+    .slogo{font-size:4.5rem;line-height:1;}
+    .sh1{font-size:clamp(1.8rem,5vw,2.8rem);font-weight:900;color:#FFD54F;text-align:center;line-height:1.2;}
+    .ssub{color:#90CAF9;font-size:0.92rem;font-weight:700;text-align:center;max-width:360px;line-height:1.6;}
+    .scard{
+      background:rgba(255,255,255,0.05);border-radius:16px;
+      padding:14px 22px;color:#ccc;font-size:0.84rem;font-weight:700;
+      text-align:left;line-height:1.9;max-width:320px;
+    }
+    .sbtn{
+      padding:14px 36px;border:none;border-radius:40px;
+      cursor:pointer;font-family:'Nunito',sans-serif;font-weight:900;font-size:1.1rem;
+      transition:transform 0.1s,box-shadow 0.1s;
+    }
+    .sbtn:active{transform:translateY(4px);}
+    .btn-start{background:#4A148C;color:white;box-shadow:0 6px 0 #2E0057;}
+    .btn-again{background:#1565C0;color:white;box-shadow:0 5px 0 #0D47A1;margin-top:6px;}
+    .eicon{font-size:5rem;}
+    .etitle{font-size:2rem;font-weight:900;color:white;text-align:center;}
+    .esub{color:#aaa;font-size:0.92rem;font-weight:700;text-align:center;max-width:320px;line-height:1.5;}
+    .escore{font-size:1.5rem;font-weight:900;color:#FFD54F;}
+  </style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hitem">🐾 <span id="found-val" class="hval">0</span><span style="color:#888">/8</span></div>
+  <div class="meter-wrap">
+    <span class="meter-label">◄</span>
+    <div class="meter-bar"><div class="meter-fill lm" id="lmeter" style="width:0%"></div></div>
+    <div class="meter-bar"><div class="meter-fill rm" id="rmeter" style="width:0%"></div></div>
+    <span class="meter-label">►</span>
+  </div>
+  <div class="hitem"><span id="temp-txt" class="htemp" style="color:#555">· · ·</span></div>
+  <div class="hright">
+    <div class="hitem">⏱ <span id="timer-val" class="hval">0:00</span></div>
+    <button id="snd-btn" onclick="toggleSound()">🔊 Sound</button>
+  </div>
+</div>
+
+<!-- D-Pad -->
+<div id="dpad">
+  <div class="drow">
+    <button class="dbtn" id="dbtn-u" onpointerdown="move(0,-1)">▲</button>
+    <div style="display:flex;gap:5px;align-items:center;">
+      <button class="dbtn" id="dbtn-l" onpointerdown="move(-1,0)">◀</button>
+      <button id="sniff-btn" onclick="doSniff()"><div id="sniff-icon">👃</div><div>SNIFF</div></button>
+      <button class="dbtn" id="dbtn-r" onpointerdown="move(1,0)">▶</button>
+    </div>
+    <button class="dbtn" id="dbtn-d" onpointerdown="move(0,1)">▼</button>
+  </div>
+</div>
+
+<!-- Title -->
+<div id="title-screen" class="screen">
+  <div class="slogo">🐕🦴🌙</div>
+  <div class="sh1">Bluey's Sound Patrol!</div>
+  <div class="ssub">Bluey lost her toys in the dark backyard.<br>Use your ears to sniff them out!</div>
+  <div class="scard">
+    👂 <b>Listen</b> for pings — louder means closer!<br>
+    ◀ ▶ Left/right ear tells you <b>which side</b> to go<br>
+    👃 <b>SNIFF</b> for a burst of all signals at once<br>
+    🔥 Watch the <b>HOT/WARM</b> meter in the HUD<br>
+    🎯 Find all <b>8 hidden toys</b> to win!
+  </div>
+  <button class="sbtn btn-start" onclick="startGame()">🔦 START HUNTING!</button>
+</div>
+
+<!-- End screen -->
+<div id="end-screen" class="screen hidden">
+  <div class="eicon" id="end-icon">🎉</div>
+  <div class="etitle" id="end-title">All Toys Found!</div>
+  <div class="esub" id="end-sub">Bluey found every single toy!</div>
+  <div class="escore" id="end-score">Time: 0:00</div>
+  <button class="sbtn btn-again" onclick="restartGame()">🔄 Play Again</button>
+</div>
+
+<script>
+'use strict';
+
+// ─── Canvas ───────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H, HUD_H, DPAD_H, GRID_X, GRID_Y, CS;
+
+const COLS = 16, ROWS = 11;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  HUD_H  = document.getElementById('hud').offsetHeight  || 56;
+  DPAD_H = document.getElementById('dpad').offsetHeight || 72;
+  const availW = W - 20;
+  const availH = H - HUD_H - DPAD_H - 14;
+  CS = Math.max(20, Math.floor(Math.min(availW / COLS, availH / ROWS)));
+  GRID_X = Math.floor((W - CS * COLS) / 2);
+  GRID_Y = HUD_H + Math.floor((H - HUD_H - DPAD_H - CS * ROWS) / 2);
+  initStars();
+}
+window.addEventListener('resize', resize);
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
+let AC = null;
+let soundOn = true;
+
+function getAC() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+
+function playTone(freq, pan, vol, dur, type='sine') {
+  if (!soundOn) return;
+  const ac = getAC();
+  const osc  = ac.createOscillator();
+  const gain = ac.createGain();
+  const pan_ = ac.createStereoPanner();
+  osc.type = type;
+  osc.frequency.value = freq;
+  pan_.pan.value = Math.max(-1, Math.min(1, pan));
+  gain.gain.setValueAtTime(0, ac.currentTime);
+  gain.gain.linearRampToValueAtTime(vol, ac.currentTime + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+  osc.connect(gain); gain.connect(pan_); pan_.connect(ac.destination);
+  osc.start(ac.currentTime);
+  osc.stop(ac.currentTime + dur + 0.02);
+}
+
+function playFootstep() {
+  if (!soundOn) return;
+  const ac = getAC();
+  const buf = ac.createBuffer(1, ac.sampleRate * 0.06, ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i=0; i<d.length; i++) d[i] = (Math.random()*2-1) * (1-(i/d.length));
+  const src = ac.createBufferSource();
+  const flt = ac.createBiquadFilter();
+  const g   = ac.createGain();
+  src.buffer = buf;
+  flt.type = 'bandpass'; flt.frequency.value = 600+Math.random()*200;
+  g.gain.value = 0.18;
+  src.connect(flt); flt.connect(g); g.connect(ac.destination);
+  src.start();
+}
+
+function playFindJingle(pitch) {
+  if (!soundOn) return;
+  const notes = [pitch, pitch*1.25, pitch*1.5, pitch*2];
+  notes.forEach((f,i) => setTimeout(()=>playTone(f, 0, 0.25, 0.18), i*100));
+}
+
+function playWinFanfare() {
+  if (!soundOn) return;
+  const seq = [523,659,784,1047,784,1047,1175,1047];
+  seq.forEach((f,i) => setTimeout(()=>playTone(f, 0, 0.18, 0.22, 'triangle'), i*130));
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  document.getElementById('snd-btn').textContent = soundOn ? '🔊 Sound' : '🔇 Muted';
+}
+
+// ─── Stars ────────────────────────────────────────────────────────────────────
+let stars = [];
+function initStars() {
+  stars = Array.from({length:80}, () => ({
+    x: Math.random()*W, y: Math.random()*H*0.45,
+    r: 0.4+Math.random()*1.4, tw: Math.random()*Math.PI*2
+  }));
+}
+
+// ─── Toy definitions ──────────────────────────────────────────────────────────
+const TOY_DEFS = [
+  { emoji:'🦴', label:'Bone',       pitch:220, color:'#FFD54F' },
+  { emoji:'🎈', label:'Balloon',    pitch:293, color:'#FF7043' },
+  { emoji:'⚽', label:'Ball',       pitch:330, color:'#66BB6A' },
+  { emoji:'🎮', label:'Controller', pitch:370, color:'#42A5F5' },
+  { emoji:'🧸', label:'Teddy',      pitch:440, color:'#FF8A65' },
+  { emoji:'🎨', label:'Paints',     pitch:523, color:'#EC407A' },
+  { emoji:'🪁', label:'Boomerang',  pitch:587, color:'#AB47BC' },
+  { emoji:'⭐', label:'Star',       pitch:659, color:'#FFCA28' },
+];
+
+// ─── Game state ───────────────────────────────────────────────────────────────
+let G;
+function resetG() {
+  G = {
+    running: false,
+    px: Math.floor(COLS/2), py: Math.floor(ROWS/2),
+    toys: [],
+    fog: Array.from({length:ROWS}, ()=>Array(COLS).fill(1)),
+    found: 0,
+    startTime: 0,
+    elapsed: 0,
+    sniffCool: 0,
+    vfx: [],       // visual effects
+    dirGlows: [],  // directional screen-edge glows
+    footprints: [],// fading footprints
+    tick: 0,
+  };
+}
+resetG();
+
+// ─── Toy placement ────────────────────────────────────────────────────────────
+function placeToys() {
+  G.toys = [];
+  const used = new Set();
+  used.add(`${G.px},${G.py}`);
+  // keep toys at least 3 cells from start
+  for (let t=0; t<8; t++) {
+    let gx, gy;
+    let attempts = 0;
+    do {
+      gx = 1+Math.floor(Math.random()*(COLS-2));
+      gy = 1+Math.floor(Math.random()*(ROWS-2));
+      attempts++;
+    } while (
+      (used.has(`${gx},${gy}`) ||
+       Math.abs(gx-G.px)+Math.abs(gy-G.py)<3) &&
+      attempts<200
+    );
+    used.add(`${gx},${gy}`);
+    const def = TOY_DEFS[t];
+    G.toys.push({
+      gx, gy, found:false,
+      emoji:def.emoji, label:def.label,
+      pitch:def.pitch, color:def.color,
+      lastPing:0, pingInterval:2000,
+    });
+  }
+}
+
+// ─── Fog of war ───────────────────────────────────────────────────────────────
+function revealAround(cx, cy, radius) {
+  for (let dy=-radius; dy<=radius; dy++) {
+    for (let dx=-radius; dx<=radius; dx++) {
+      if (dx*dx+dy*dy <= radius*radius) {
+        const nx=cx+dx, ny=cy+dy;
+        if (nx>=0&&nx<COLS&&ny>=0&&ny<ROWS) G.fog[ny][nx]=0;
+      }
+    }
+  }
+}
+
+// ─── Movement ─────────────────────────────────────────────────────────────────
+let moveLock = false;
+function move(dx, dy) {
+  if (!G.running || moveLock) return;
+  moveLock = true;
+  setTimeout(()=>moveLock=false, 120);
+
+  const nx = G.px+dx, ny = G.py+dy;
+  if (nx<0||nx>=COLS||ny<0||ny>=ROWS) {
+    playTone(120, 0, 0.12, 0.15, 'sawtooth');
+    return;
+  }
+
+  // Footprint at old position
+  G.footprints.push({
+    x: GRID_X+G.px*CS+CS/2,
+    y: GRID_Y+G.py*CS+CS/2,
+    alpha:0.7, size:CS*0.18
+  });
+
+  G.px=nx; G.py=ny;
+  playFootstep();
+  revealAround(G.px, G.py, 3);
+
+  // Check if landed on toy
+  for (const toy of G.toys) {
+    if (!toy.found && toy.gx===G.px && toy.gy===G.py) {
+      collectToy(toy);
+    }
+  }
+  updateHUD();
+}
+
+function collectToy(toy) {
+  toy.found = true;
+  G.found++;
+  playFindJingle(toy.pitch);
+  // Burst particles
+  const cx = GRID_X+toy.gx*CS+CS/2;
+  const cy = GRID_Y+toy.gy*CS+CS/2;
+  for (let i=0;i<30;i++) {
+    const a=Math.random()*Math.PI*2;
+    const sp=2+Math.random()*5;
+    G.vfx.push({
+      type:'particle', x:cx, y:cy,
+      vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-2,
+      alpha:1, size:3+Math.random()*5,
+      color:toy.color, gravity:0.1
+    });
+  }
+  // Floating emoji
+  G.vfx.push({ type:'float', x:cx, y:cy, vy:-1.2, alpha:1, emoji:toy.emoji, size:CS*0.9 });
+  // Toast-style message drawn on canvas
+  G.vfx.push({ type:'msg', x:W/2, y:GRID_Y+CS*ROWS/2, alpha:1.4, text:`Found ${toy.emoji} ${toy.label}!`, color:toy.color });
+
+  if (G.found>=8) setTimeout(winGame, 600);
+}
+
+// ─── Sniff ────────────────────────────────────────────────────────────────────
+function doSniff() {
+  if (G.sniffCool>0||!G.running) return;
+  G.sniffCool=8;
+  document.getElementById('sniff-btn').classList.add('cooldown');
+  // Play all toy pings at 1.5× volume
+  for (const toy of G.toys) {
+    if (toy.found) continue;
+    const dist  = toyDist(toy);
+    const vol   = Math.max(0.04, 0.6-dist*0.04) * 1.5;
+    const pan   = (toy.gx-G.px)/COLS * 2;
+    setTimeout(()=>playTone(toy.pitch, pan, Math.min(0.5,vol), 0.35), Math.random()*120);
+  }
+  // Ripple from player
+  const cx=GRID_X+G.px*CS+CS/2, cy=GRID_Y+G.py*CS+CS/2;
+  G.vfx.push({ type:'ripple', x:cx, y:cy, r:0, maxR:CS*4, alpha:0.7, color:'#CE93D8' });
+}
+
+// ─── Ping scheduling ─────────────────────────────────────────────────────────
+function updatePings(now) {
+  if (!G.running) return;
+  for (const toy of G.toys) {
+    if (toy.found) continue;
+    const dist  = toyDist(toy);
+    toy.pingInterval = Math.max(250, 300+dist*120);
+    if (now - toy.lastPing >= toy.pingInterval) {
+      toy.lastPing = now;
+      const vol  = Math.max(0.03, 0.55-dist*0.038);
+      const pan  = (toy.gx-G.px)/COLS * 2.0;
+      playTone(toy.pitch, pan, vol, 0.22);
+      // Directional screen-edge glow
+      const angle = Math.atan2(-(toy.gy-G.py), toy.gx-G.px);
+      G.dirGlows.push({ angle, intensity: vol/0.55, alpha:1, color:toy.color });
+    }
+  }
+}
+
+function toyDist(toy) {
+  const dx=toy.gx-G.px, dy=toy.gy-G.py;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+// ─── HUD update ───────────────────────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('found-val').textContent = G.found;
+
+  // Stereo meters: average signal from all unfound toys weighted by volume
+  let lSig=0, rSig=0, count=0;
+  let nearestDist=99;
+  for (const toy of G.toys) {
+    if (toy.found) continue;
+    const dist=toyDist(toy);
+    if (dist<nearestDist) nearestDist=dist;
+    const vol=Math.max(0,0.55-dist*0.038);
+    const pan=(toy.gx-G.px)/COLS*2;
+    lSig+=vol*(1-Math.max(0,pan))*0.5+vol*0.5;
+    rSig+=vol*(1+Math.min(0,pan))*0.5+vol*0.5;  // actually:
+    const lPart = vol * Math.max(0,1-pan) * 0.5 + vol*0.5;
+    const rPart = vol * Math.max(0,1+pan) * 0.5 + vol*0.5;
+    lSig = lPart; rSig = rPart; // take nearest signal
+    count++;
+  }
+  if (count>0) {
+    document.getElementById('lmeter').style.width = Math.min(100,lSig/0.55*100)+'%';
+    document.getElementById('rmeter').style.width = Math.min(100,rSig/0.55*100)+'%';
+  } else {
+    document.getElementById('lmeter').style.width='0%';
+    document.getElementById('rmeter').style.width='0%';
+  }
+
+  // HOT/WARM/COOL
+  const t = document.getElementById('temp-txt');
+  if (nearestDist<=1.5) { t.textContent='🔥 SCORCHING!'; t.style.color='#FF1744'; }
+  else if (nearestDist<=2.5) { t.textContent='🌶️ HOT!'; t.style.color='#FF6D00'; }
+  else if (nearestDist<=4)   { t.textContent='🌡️ WARM'; t.style.color='#FFA726'; }
+  else if (nearestDist<=6)   { t.textContent='🌀 COOL'; t.style.color='#42A5F5'; }
+  else if (nearestDist<=9)   { t.textContent='❄️ COLD'; t.style.color='#90CAF9'; }
+  else                       { t.textContent='🧊 FRIGID'; t.style.color='#E3F2FD'; }
+
+  // Timer
+  const s = Math.floor(G.elapsed);
+  document.getElementById('timer-val').textContent =
+    `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+// ─── Win / Restart ────────────────────────────────────────────────────────────
+function winGame() {
+  G.running = false;
+  playWinFanfare();
+  const s = Math.floor(G.elapsed);
+  const timeStr = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  document.getElementById('end-icon').textContent='🏆';
+  document.getElementById('end-title').textContent='All Toys Found!';
+  document.getElementById('end-sub').textContent='Bluey used her amazing dog ears to find every single toy hidden in the dark backyard!';
+  document.getElementById('end-score').textContent=`Time: ${timeStr} 🎉`;
+  document.getElementById('end-screen').classList.remove('hidden');
+}
+
+function startGame() {
+  getAC();
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('end-screen').classList.add('hidden');
+  resetG();
+  resize();
+  G.px=Math.floor(COLS/2); G.py=Math.floor(ROWS/2);
+  placeToys();
+  revealAround(G.px,G.py,3);
+  G.startTime = performance.now();
+  G.running = true;
+  updateHUD();
+}
+
+function restartGame() {
+  document.getElementById('end-screen').classList.add('hidden');
+  startGame();
+}
+
+// ─── Drawing ──────────────────────────────────────────────────────────────────
+let tick=0;
+
+function drawBg() {
+  // Night sky
+  const sg = ctx.createLinearGradient(0,0,0,H);
+  sg.addColorStop(0,'#060914'); sg.addColorStop(1,'#0D1829');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,W,H);
+  // Stars
+  for (const s of stars) {
+    const a=0.3+Math.sin(tick*0.035+s.tw)*0.5;
+    ctx.fillStyle=`rgba(220,230,255,${a})`;
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }
+  // Moon
+  const my=H*0.12;
+  const mg=ctx.createRadialGradient(W*0.88,my,0,W*0.88,my,40);
+  mg.addColorStop(0,'rgba(200,220,255,0.3)'); mg.addColorStop(1,'rgba(200,220,255,0)');
+  ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(W*0.88,my,40,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#E8EAF6'; ctx.beginPath(); ctx.arc(W*0.88,my,17,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(180,190,220,0.4)';
+  ctx.beginPath(); ctx.arc(W*0.88+5,my-4,6,0,Math.PI*2); ctx.fill();
+}
+
+function drawYard() {
+  // Fence border
+  const bx=GRID_X-8, by=GRID_Y-8, bw=CS*COLS+16, bh=CS*ROWS+16;
+  ctx.fillStyle='#3E2723';
+  ctx.fillRect(bx,by,bw,8); ctx.fillRect(bx,by+bh-8,bw,8);
+  ctx.fillRect(bx,by,8,bh); ctx.fillRect(bx+bw-8,by,8,bh);
+  // Fence posts
+  ctx.fillStyle='#4E342E';
+  for(let c=0;c<=COLS;c+=2){const fx=GRID_X+c*CS-4;ctx.fillRect(fx,by-10,8,18);}
+  for(let c=0;c<=COLS;c+=2){const fx=GRID_X+c*CS-4;ctx.fillRect(fx,by+bh-8,8,18);}
+
+  // Grid cells
+  for(let r=0;r<ROWS;r++) {
+    for(let c=0;c<COLS;c++) {
+      const cx=GRID_X+c*CS, cy=GRID_Y+r*CS;
+      const revealed=G.fog[r][c]===0;
+      const dx=c-G.px, dy=r-G.py;
+      const pdist=Math.sqrt(dx*dx+dy*dy);
+
+      if (!revealed) {
+        // Fog
+        const noiseVar=Math.sin(c*0.8+r*1.1+tick*0.01)*0.02;
+        ctx.fillStyle=`rgba(5,8,16,${0.93+noiseVar})`;
+        ctx.fillRect(cx,cy,CS,CS);
+      } else {
+        // Dark grass, brighter near player
+        const bright=Math.max(0.12,0.55-pdist*0.07);
+        const gr=Math.round(18*bright), gg=Math.round(38*bright), gb=Math.round(22*bright);
+        ctx.fillStyle=`rgb(${gr},${gg},${gb})`;
+        ctx.fillRect(cx,cy,CS,CS);
+        // Subtle grid lines
+        ctx.strokeStyle='rgba(255,255,255,0.04)';
+        ctx.lineWidth=1;
+        ctx.strokeRect(cx+0.5,cy+0.5,CS-1,CS-1);
+        // "Warm" hint if unfound toy very close
+        for (const toy of G.toys) {
+          if (toy.found) continue;
+          const td=Math.sqrt((c-toy.gx)**2+(r-toy.gy)**2);
+          if (td<=1.8) {
+            const glow=ctx.createRadialGradient(
+              GRID_X+toy.gx*CS+CS/2,GRID_Y+toy.gy*CS+CS/2,0,
+              GRID_X+toy.gx*CS+CS/2,GRID_Y+toy.gy*CS+CS/2,CS*2
+            );
+            glow.addColorStop(0,`${toy.color}22`);
+            glow.addColorStop(1,'rgba(0,0,0,0)');
+            ctx.fillStyle=glow;
+            ctx.fillRect(cx,cy,CS,CS);
+          }
+        }
+      }
+    }
+  }
+
+  // Player "torch" light
+  const plx=GRID_X+G.px*CS+CS/2, ply=GRID_Y+G.py*CS+CS/2;
+  const lg=ctx.createRadialGradient(plx,ply,0,plx,ply,CS*3.5);
+  lg.addColorStop(0,'rgba(255,220,120,0.12)');
+  lg.addColorStop(0.5,'rgba(255,180,60,0.04)');
+  lg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=lg; ctx.fillRect(GRID_X,GRID_Y,CS*COLS,CS*ROWS);
+}
+
+function drawFootprints() {
+  for (let i=G.footprints.length-1;i>=0;i--) {
+    const f=G.footprints[i];
+    f.alpha-=0.012;
+    if (f.alpha<=0){G.footprints.splice(i,1);continue;}
+    ctx.fillStyle=`rgba(255,200,100,${f.alpha*0.3})`;
+    ctx.beginPath(); ctx.arc(f.x,f.y,f.size,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawFoundMarkers() {
+  for (const toy of G.toys) {
+    if (!toy.found) continue;
+    const cx=GRID_X+toy.gx*CS+CS/2, cy=GRID_Y+toy.gy*CS+CS/2;
+    // Glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,CS);
+    g.addColorStop(0,toy.color+'55'); g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,CS,0,Math.PI*2); ctx.fill();
+    // Emoji
+    ctx.font=`${CS*0.72}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(toy.emoji,cx,cy);
+  }
+}
+
+function drawPlayer() {
+  const cx=GRID_X+G.px*CS+CS/2, cy=GRID_Y+G.py*CS+CS/2;
+  const sc=CS*0.38;
+  const bob=Math.sin(tick*0.12)*1.2;
+  ctx.save(); ctx.translate(cx,cy+bob);
+  // Body
+  ctx.fillStyle='#1565C0';
+  ctx.beginPath(); ctx.ellipse(0,2,sc*0.7,sc*0.8,0,0,Math.PI*2); ctx.fill();
+  // Head
+  ctx.fillStyle='#3B7DD8';
+  ctx.beginPath(); ctx.arc(0,-sc*0.55,sc*0.7,0,Math.PI*2); ctx.fill();
+  // Ears
+  ctx.fillStyle='#1A56A0';
+  ctx.beginPath(); ctx.moveTo(-sc*0.4,-sc*0.3); ctx.lineTo(-sc*0.8,sc*0.2); ctx.lineTo(-sc*0.2,sc*0.25); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(sc*0.4,-sc*0.3); ctx.lineTo(sc*0.8,sc*0.2); ctx.lineTo(sc*0.2,sc*0.25); ctx.closePath(); ctx.fill();
+  // Snout
+  ctx.fillStyle='#88BBEE';
+  ctx.beginPath(); ctx.ellipse(0,-sc*0.25,sc*0.5,sc*0.38,0,0,Math.PI*2); ctx.fill();
+  // Eyes
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(-sc*0.22,-sc*0.62,sc*0.15,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sc*0.22,-sc*0.62,sc*0.15,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(-sc*0.18,-sc*0.65,sc*0.06,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sc*0.26,-sc*0.65,sc*0.06,0,Math.PI*2); ctx.fill();
+  // Nose
+  ctx.fillStyle='#0a0a1a';
+  ctx.beginPath(); ctx.ellipse(0,-sc*0.38,sc*0.18,sc*0.12,0,0,Math.PI*2); ctx.fill();
+  // Tail (waggle)
+  const tailWag=Math.sin(tick*0.18)*0.4;
+  ctx.strokeStyle='#1565C0'; ctx.lineWidth=sc*0.25; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(sc*0.55,sc*0.3);
+  ctx.quadraticCurveTo(sc*(0.9+tailWag),sc*(-0.2+tailWag), sc*(0.7+tailWag*0.5), -sc*0.5);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawVFX() {
+  for (let i=G.vfx.length-1;i>=0;i--) {
+    const v=G.vfx[i];
+    if (v.type==='particle') {
+      v.x+=v.vx; v.y+=v.vy; v.vy+=v.gravity; v.alpha-=0.022;
+      if (v.alpha<=0){G.vfx.splice(i,1);continue;}
+      ctx.save(); ctx.globalAlpha=v.alpha;
+      ctx.fillStyle=v.color;
+      ctx.beginPath(); ctx.arc(v.x,v.y,v.size,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    } else if (v.type==='float') {
+      v.y+=v.vy; v.alpha-=0.018;
+      if (v.alpha<=0){G.vfx.splice(i,1);continue;}
+      ctx.save(); ctx.globalAlpha=Math.min(1,v.alpha);
+      ctx.font=`${v.size}px serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(v.emoji,v.x,v.y);
+      ctx.restore();
+    } else if (v.type==='msg') {
+      v.y-=0.5; v.alpha-=0.015;
+      if (v.alpha<=0){G.vfx.splice(i,1);continue;}
+      ctx.save(); ctx.globalAlpha=Math.min(1,v.alpha);
+      ctx.font='bold 18px Nunito,sans-serif';
+      ctx.textAlign='center'; ctx.fillStyle=v.color;
+      ctx.shadowColor=v.color; ctx.shadowBlur=12;
+      ctx.fillText(v.text,v.x,v.y);
+      ctx.restore();
+    } else if (v.type==='ripple') {
+      v.r+=4; v.alpha-=0.025;
+      if (v.alpha<=0){G.vfx.splice(i,1);continue;}
+      ctx.save(); ctx.globalAlpha=v.alpha;
+      ctx.strokeStyle=v.color; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(v.x,v.y,v.r,0,Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+function drawDirGlows() {
+  for (let i=G.dirGlows.length-1;i>=0;i--) {
+    const g=G.dirGlows[i];
+    g.alpha-=0.04;
+    if(g.alpha<=0){G.dirGlows.splice(i,1);continue;}
+    // Map angle to a point on the screen edge
+    const ex=W/2+Math.cos(g.angle)*W*0.6;
+    const ey=H/2-Math.sin(g.angle)*H*0.6;
+    const grd=ctx.createRadialGradient(ex,ey,0,ex,ey,W*0.4);
+    const hex=g.color+'';
+    grd.addColorStop(0,`${hex}${Math.round(g.alpha*g.intensity*55).toString(16).padStart(2,'0')}`);
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.save(); ctx.globalAlpha=1;
+    ctx.fillStyle=grd;
+    ctx.fillRect(0,HUD_H,W,H-HUD_H-DPAD_H);
+    ctx.restore();
+  }
+}
+
+function drawRadar() {
+  // Small radar in bottom-right of grid area
+  const rx=GRID_X+CS*COLS-35, ry=GRID_Y+CS*ROWS-35;
+  const R=28;
+  // Background
+  ctx.save();
+  ctx.fillStyle='rgba(10,14,26,0.8)';
+  ctx.beginPath(); ctx.arc(rx,ry,R+3,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(100,130,200,0.4)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(rx,ry,R,0,Math.PI*2); ctx.stroke();
+  // Cross hairs
+  ctx.strokeStyle='rgba(100,130,200,0.2)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rx-R,ry); ctx.lineTo(rx+R,ry); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rx,ry-R); ctx.lineTo(rx,ry+R); ctx.stroke();
+  // Nearest unfound toy dot
+  let nearest=null, nearDist=99;
+  for(const toy of G.toys) {
+    if(toy.found) continue;
+    const d=toyDist(toy);
+    if(d<nearDist){nearDist=d;nearest=toy;}
+  }
+  if(nearest){
+    const angle=Math.atan2(-(nearest.gy-G.py),nearest.gx-G.px);
+    const maxDist=Math.sqrt(COLS*COLS+ROWS*ROWS);
+    const dotR=R*Math.min(0.92,(nearDist/maxDist)*2.5+0.1);
+    const dotX=rx+Math.cos(angle)*dotR;
+    const dotY=ry+Math.sin(angle)*dotR;
+    // Pulse
+    const pulse=0.6+Math.sin(tick*0.15)*0.4;
+    ctx.fillStyle=nearest.color;
+    ctx.globalAlpha=pulse;
+    ctx.beginPath(); ctx.arc(dotX,dotY,4,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=pulse*0.4;
+    ctx.beginPath(); ctx.arc(dotX,dotY,7,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  // Center player dot
+  ctx.fillStyle='#FFD54F';
+  ctx.beginPath(); ctx.arc(rx,ry,3,0,Math.PI*2); ctx.fill();
+  ctx.font='bold 8px Nunito,sans-serif';
+  ctx.fillStyle='rgba(100,130,200,0.6)'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('N',rx,ry-R+7);
+  ctx.restore();
+}
+
+function drawSniffCooldown() {
+  if (G.sniffCool<=0) return;
+  // Show cooldown ring on sniff button (canvas overlay at button center)
+  // Actually update HTML button instead
+}
+
+// ─── Game loop ────────────────────────────────────────────────────────────────
+let lastTime=null;
+function loop(ts) {
+  if(!lastTime) lastTime=ts;
+  const dt=Math.min((ts-lastTime)/1000,0.1);
+  lastTime=ts; tick++;
+
+  if(G.running) {
+    G.elapsed=(ts-G.startTime)/1000;
+    G.tick++;
+    if(G.sniffCool>0){
+      G.sniffCool-=dt;
+      if(G.sniffCool<=0){
+        document.getElementById('sniff-btn').classList.remove('cooldown');
+        G.sniffCool=0;
+      }
+    }
+    updatePings(ts);
+    // Update HUD periodically
+    if(G.tick%4===0) updateHUD();
+  }
+
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawYard();
+  drawFootprints();
+  drawFoundMarkers();
+  drawPlayer();
+  drawVFX();
+  drawDirGlows();
+  drawRadar();
+
+  requestAnimationFrame(loop);
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if(!G.running) return;
+  if(e.key==='ArrowUp'   ||e.key==='w'||e.key==='W') { e.preventDefault(); move(0,-1); }
+  if(e.key==='ArrowDown' ||e.key==='s'||e.key==='S') { e.preventDefault(); move(0,1); }
+  if(e.key==='ArrowLeft' ||e.key==='a'||e.key==='A') { e.preventDefault(); move(-1,0); }
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') { e.preventDefault(); move(1,0); }
+  if(e.key===' ') { e.preventDefault(); doSniff(); }
+});
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+resize();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
