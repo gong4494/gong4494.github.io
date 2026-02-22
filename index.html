@@ -50,6 +50,18 @@
       font-weight:700; color:#1B6CA8; text-shadow:1px 1px 0 #fff;
     }
 
+    .lightning-icon {
+      display: block; text-align: center; margin-bottom: 16px;
+      font-size: clamp(3rem, 10vw, 6rem);
+      animation: zapPulse 1.4s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px #ffe600) drop-shadow(0 0 28px #ffaa00);
+      line-height: 1;
+    }
+    @keyframes zapPulse {
+      0%, 100% { transform: scale(1) rotate(-4deg); opacity: 1; }
+      50%       { transform: scale(1.18) rotate(4deg); opacity: 0.85; }
+    }
+
     .section {
       position:relative; z-index:1;
       max-width:960px; margin:30px auto; padding:0 20px;
@@ -234,6 +246,7 @@
   <div class="paws" id="paws"></div>
 
   <header>
+    <span class="lightning-icon">⚡</span>
     <div class="title-banner">
       <h1>🐾 Audrey's Bluey World! 🐾</h1>
     </div>
