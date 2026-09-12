@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dragon Fire Breakout! 🐉</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family:'Nunito',sans-serif;
+      background: radial-gradient(ellipse at 50% 30%, #1e0840 0%, #0d0520 60%, #000 100%);
+      min-height:100vh;
+      display:flex; flex-direction:column; align-items:center;
+      overflow-x:hidden;
+    }
+
+    /* ── Stars ── */
+    .stars { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+    .star  { position:absolute; background:white; border-radius:50%; animation:twinkle ease-in-out infinite; }
+    @keyframes twinkle {
+      0%,100% { opacity:0.15; transform:scale(1); }
+      50%      { opacity:0.9;  transform:scale(1.5); }
+    }
+
+    /* ── Header ── */
+    header {
+      position:relative; z-index:1;
+      text-align:center; padding:22px 20px 12px;
+    }
+    .title-banner {
+      background: linear-gradient(135deg, #35085c 0%, #7a1faa 100%);
+      display:inline-block; padding:14px 44px; border-radius:50px;
+      box-shadow: 0 6px 0 #1a0030, 0 10px 40px rgba(160,60,255,0.45);
+      animation: headerGlow 2.5s ease-in-out infinite;
+    }
+    @keyframes headerGlow {
+      0%,100% { box-shadow: 0 6px 0 #1a0030, 0 10px 40px rgba(160,60,255,0.35); }
+      50%      { box-shadow: 0 6px 0 #1a0030, 0 10px 60px rgba(200,80,255,0.65), 0 0 100px rgba(255,120,200,0.2); }
+    }
+    .title-banner h1 {
+      font-size:clamp(1.5rem,5vw,2.6rem); font-weight:900;
+      color:#FFE066; text-shadow:2px 2px 0 #b07800, 0 0 24px #ffaa00; letter-spacing:1px;
+    }
+    .subtitle {
+      margin-top:10px; font-size:clamp(0.85rem,2.5vw,1.1rem);
+      font-weight:700; color:#cc88ff; text-shadow:1px 1px 0 #330055;
+    }
+
+    /* ── Layout ── */
+    .game-wrap {
+      position:relative; z-index:1;
+      display:flex; gap:18px; align-items:flex-start;
+      padding:10px 16px 20px; width:100%; max-width:680px; justify-content:center;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background:rgba(20,4,50,0.88);
+      border:2px solid rgba(140,60,240,0.35);
+      border-radius:16px; padding:14px 12px;
+      min-width:120px; color:white; flex-shrink:0;
+      backdrop-filter:blur(12px);
+    }
+    .sidebar-label {
+      font-size:0.72rem; color:#aa77dd; text-transform:uppercase;
+      letter-spacing:1px; margin-bottom:3px;
+    }
+    .stat-val { font-size:1.7rem; font-weight:900; color:#FFE066; text-shadow:0 0 10px #ffaa00; line-height:1; }
+    .stat-block { margin-bottom:14px; }
+    .lives-row  { font-size:1.3rem; line-height:1.5; }
+    .legend { margin-top:10px; font-size:0.68rem; color:#9966cc; line-height:1.85; }
+    .legend div { display:flex; align-items:center; gap:4px; }
+    .leg-swatch { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+    /* ── Canvas wrapper ── */
+    .canvas-wrap { position:relative; flex-shrink:0; }
+
+    canvas {
+      display:block; border-radius:14px;
+      border:2px solid rgba(140,60,240,0.45);
+      box-shadow: 0 0 50px rgba(140,60,240,0.3), inset 0 0 50px rgba(0,0,0,0.4);
+      cursor:none; touch-action:none;
+      max-width:100%;
+    }
+
+    /* ── Overlay ── */
+    .overlay {
+      position:absolute; inset:0; border-radius:14px;
+      background:rgba(8,0,26,0.9);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:14px; color:white; text-align:center; padding:24px;
+      z-index:10;
+    }
+    .overlay-emoji { font-size:clamp(2.5rem,8vw,4rem); animation:floatDragon 2s ease-in-out infinite; }
+    @keyframes floatDragon {
+      0%,100% { transform:translateY(0) rotate(-3deg); }
+      50%      { transform:translateY(-10px) rotate(3deg); }
+    }
+    .overlay h2 {
+      font-size:clamp(1.3rem,4vw,2rem); font-weight:900;
+      color:#FFE066; text-shadow:2px 2px 0 #b07800, 0 0 20px #ffaa00;
+    }
+    .overlay p { font-size:clamp(0.85rem,2.5vw,1rem); color:#cc99ff; max-width:280px; line-height:1.55; }
+    .overlay-btn {
+      padding:12px 34px;
+      background:linear-gradient(135deg,#7a1faa,#35085c);
+      color:#FFE066; border:2px solid rgba(200,120,255,0.55);
+      border-radius:50px; font-family:'Nunito',sans-serif;
+      font-size:1.05rem; font-weight:900; cursor:pointer;
+      box-shadow:0 5px 0 #160025, 0 0 24px rgba(180,60,255,0.4);
+      transition:transform 0.1s, box-shadow 0.1s;
+      text-shadow:1px 1px 0 #7a5000;
+    }
+    .overlay-btn:active { transform:translateY(4px); box-shadow:0 1px 0 #160025; }
+    .overlay-btn:hover  { background:linear-gradient(135deg,#9933cc,#4a0f78); }
+
+    /* ── Controls hint ── */
+    .controls {
+      position:relative; z-index:1;
+      text-align:center; color:rgba(180,130,255,0.6);
+      font-size:0.8rem; padding:0 16px 20px; line-height:1.7;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width:660px) {
+      .game-wrap { flex-direction:column; align-items:center; padding:8px 10px 16px; }
+      .sidebar {
+        display:grid; grid-template-columns:repeat(4,1fr);
+        min-width:unset; width:100%; padding:10px 12px;
+      }
+      .legend { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<header>
+  <div class="title-banner">
+    <h1>🐉 Dragon Fire Breakout!</h1>
+  </div>
+  <p class="subtitle">Smash the dragon tribe bricks with your fireball, Audrey!</p>
+</header>
+
+<div class="game-wrap">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="stat-block">
+      <div class="sidebar-label">Score</div>
+      <div class="stat-val" id="score-val">0</div>
+    </div>
+    <div class="stat-block">
+      <div class="sidebar-label">Level</div>
+      <div class="stat-val" id="level-val">1</div>
+    </div>
+    <div class="stat-block">
+      <div class="sidebar-label">Best</div>
+      <div class="stat-val" id="best-val">0</div>
+    </div>
+    <div class="stat-block">
+      <div class="sidebar-label">Lives</div>
+      <div class="lives-row" id="lives-row">🐉🐉🐉</div>
+    </div>
+    <div class="legend">
+      <div><span class="leg-swatch" style="background:#FF6B35;"></span>SkyWing</div>
+      <div><span class="leg-swatch" style="background:#4A9EFF;"></span>SeaWing</div>
+      <div><span class="leg-swatch" style="background:#3a1060;box-shadow:0 0 4px #cc88ff;"></span>NightWing</div>
+      <div><span class="leg-swatch" style="background:#FFD700;"></span>SandWing</div>
+      <div><span class="leg-swatch" style="background:#6BBF59;"></span>MudWing</div>
+      <div><span class="leg-swatch" style="background:#FF69B4;"></span>RainWing</div>
+      <div><span class="leg-swatch" style="background:#B0E8EE;"></span>IceWing</div>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-wrap">
+    <canvas id="canvas" width="440" height="540"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="overlay-emoji">🐉</div>
+      <h2>Dragon Fire Breakout!</h2>
+      <p>Move your dragon paddle to bounce the fireball and destroy all the dragon tribe bricks!</p>
+      <button class="overlay-btn" onclick="startGame()">🔥 Start Game!</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="controls">
+  🖱️ Mouse / touch to move &nbsp;·&nbsp; Click / tap / Space to launch ball<br>
+  ⌨️ Arrow keys also move the paddle
+</div>
+
+<script>
+// ── Stars ─────────────────────────────────────────────────────
+(function(){
+  const el = document.getElementById('stars');
+  for (let i = 0; i < 130; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random() * 2.5 + 0.8;
+    s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-duration:${2+Math.random()*5}s;animation-delay:${Math.random()*6}s`;
+    el.appendChild(s);
+  }
+})();
+
+// ── Canvas ────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// ── Audio ─────────────────────────────────────────────────────
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playTone(freq, dur, vol, type) {
+  try {
+    const ac = ensureAudio();
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = type || 'square'; osc.frequency.value = freq;
+    const t = ac.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol || 0.12, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.start(t); osc.stop(t + dur + 0.01);
+  } catch(e){}
+}
+const SFX = {
+  brick(id)  { playTone({sky:440,sea:330,night:260,sand:550,mud:294,rain:495,ice:660,hive:370}[id]||400, 0.12, 0.11, 'square'); },
+  wall()     { playTone(160, 0.06, 0.07, 'sine'); },
+  paddle()   { playTone(300, 0.08, 0.1, 'triangle'); },
+  lose()     { [220,196,175,156].forEach((f,i) => setTimeout(()=>playTone(f,0.22,0.14,'sawtooth'),i*130)); },
+  win()      { [523,659,784,1047,1318].forEach((f,i) => setTimeout(()=>playTone(f,0.18,0.14,'triangle'),i*90)); },
+  levelUp()  { [392,494,587,784,987].forEach((f,i) => setTimeout(()=>playTone(f,0.14,0.12,'triangle'),i*75)); },
+};
+
+// ── Tribes ────────────────────────────────────────────────────
+const TRIBES = [
+  { id:'mud',   fill:'#6BBF59', dark:'#3a7a2a', pts:10 },
+  { id:'sand',  fill:'#FFD700', dark:'#c9a800', pts:20 },
+  { id:'sky',   fill:'#FF6B35', dark:'#cc3300', pts:30 },
+  { id:'ice',   fill:'#B0E8EE', dark:'#5aacb8', pts:35 },
+  { id:'sea',   fill:'#4A9EFF', dark:'#1155cc', pts:40 },
+  { id:'rain',  fill:'#FF69B4', dark:'#cc1166', pts:50 },
+  { id:'night', fill:'#3a1060', dark:'#150030', pts:60, glow:true },
+  { id:'hive',  fill:'#F5C518', dark:'#b08800', pts:45 },
+];
+
+// ── Constants ─────────────────────────────────────────────────
+const COLS = 8, ROWS = 6;
+const BW = 49, BH = 20, BG = 3;          // brick width / height / gap
+const BOFF_X = (W - (COLS*(BW+BG)-BG)) / 2;
+const BOFF_Y = 52;
+const PAD_H  = 13;
+const PAD_W0 = 86;
+const BALL_R = 8;
+
+// ── State ─────────────────────────────────────────────────────
+let state   = 'menu';     // menu | playing | levelup | gameover | win
+let score   = 0;
+let best    = 0;
+let lives   = 3;
+let level   = 1;
+let bricks  = [];
+let parts   = [];
+let flashTimer = 0;
+
+const pad  = { x:0, y: H-44, w: PAD_W0 };
+const ball = { x:0, y:0, vx:0, vy:0, live:false };
+let mouseX = W/2;
+let keyLeft = false, keyRight = false;
+let frameId = null;
+
+function baseSpeed() { return 3.8 + level * 0.45; }
+
+// ── Bricks ────────────────────────────────────────────────────
+function buildLevel(lvl) {
+  bricks = [];
+  // Row tribe assignment (bottom = easier, top = harder)
+  const rowOrder = [0,7,2,5,6,4,3,1]; // mud,hive,sky,rain,night,sea,sand,ice
+  for (let r = 0; r < ROWS; r++) {
+    const tribe = TRIBES[rowOrder[r % rowOrder.length]];
+    const hp = (lvl >= 3 && r <= 1) ? 2 : 1;
+    for (let c = 0; c < COLS; c++) {
+      // Patterns for higher levels
+      if (lvl === 2 && (r+c) % 6 === 0) continue;
+      if (lvl === 3 && (r*c) % 7 === 0) continue;
+      if (lvl === 4 && (r+c*2) % 5 === 0) continue;
+      if (lvl >= 5 && (r*3+c) % 4 === 0) continue;
+      bricks.push({
+        x: BOFF_X + c*(BW+BG),
+        y: BOFF_Y + r*(BH+BG),
+        tribe, hp, maxHp: hp, alive:true, shake:0,
+      });
+    }
+  }
+}
+
+// ── Particles ─────────────────────────────────────────────────
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random()*Math.PI*2, spd = 1.5 + Math.random()*4;
+    parts.push({ x, y,
+      vx: Math.cos(a)*spd, vy: Math.sin(a)*spd - 1,
+      r: 1.8 + Math.random()*3.5,
+      color, alpha: 1, decay: 0.018 + Math.random()*0.02,
+    });
+  }
+}
+
+// ── Reset ball ────────────────────────────────────────────────
+function resetBall() {
+  ball.x = pad.x + pad.w/2;
+  ball.y = pad.y - BALL_R - 2;
+  ball.vx = 0; ball.vy = 0; ball.live = false;
+}
+
+function launch() {
+  if (ball.live) return;
+  const spd   = baseSpeed();
+  const angle = -Math.PI/2 + (Math.random()-0.5)*0.7;
+  ball.vx = Math.cos(angle)*spd;
+  ball.vy = Math.sin(angle)*spd;
+  ball.live = true;
+  ensureAudio();
+}
+
+// ── HUD ───────────────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('score-val').textContent = score;
+  document.getElementById('level-val').textContent = level;
+  if (score > best) { best = score; document.getElementById('best-val').textContent = best; }
+  const lr = document.getElementById('lives-row');
+  lr.textContent = lives > 0 ? '🐉'.repeat(lives) : '💀';
+}
+
+// ── Overlay ───────────────────────────────────────────────────
+function showOverlay(emoji, title, body, btnTxt, fn) {
+  const ov = document.getElementById('overlay');
+  ov.innerHTML = `
+    <div class="overlay-emoji">${emoji}</div>
+    <h2>${title}</h2>
+    <p>${body}</p>
+    <button class="overlay-btn" id="ov-btn">${btnTxt}</button>`;
+  ov.querySelector('#ov-btn').onclick = fn;
+  ov.style.display = 'flex';
+}
+function hideOverlay() { document.getElementById('overlay').style.display = 'none'; }
+
+// ── Start / restart ───────────────────────────────────────────
+function startGame() {
+  score = 0; lives = 3; level = 1;
+  pad.w = PAD_W0;
+  pad.x = W/2 - pad.w/2;
+  mouseX = W/2;
+  buildLevel(1);
+  resetBall(); updateHUD(); hideOverlay();
+  state = 'playing';
+  if (!frameId) loop();
+}
+
+function doNextLevel() {
+  level++;
+  pad.w = Math.max(48, PAD_W0 - (level-1)*7);
+  buildLevel(level);
+  resetBall(); updateHUD();
+  sfxCalled = false;
+  SFX.levelUp();
+}
+
+// ── Collision helpers ─────────────────────────────────────────
+function ballHitsBrick(br) {
+  return ball.x+BALL_R > br.x && ball.x-BALL_R < br.x+BW
+      && ball.y+BALL_R > br.y && ball.y-BALL_R < br.y+BH;
+}
+
+// ── Update ────────────────────────────────────────────────────
+let levelUpTimer = 0;
+
+function update() {
+  // Keyboard paddle
+  if (keyLeft)  mouseX = Math.max(pad.w/2,        mouseX - 5);
+  if (keyRight) mouseX = Math.min(W - pad.w/2,    mouseX + 5);
+
+  if (state === 'levelup') {
+    levelUpTimer--;
+    // Animate particles
+    stepParticles();
+    if (levelUpTimer <= 0) { doNextLevel(); state = 'playing'; }
+    return;
+  }
+  if (state !== 'playing') return;
+
+  // Paddle glide to mouse
+  pad.x += (mouseX - pad.w/2 - pad.x) * 0.2;
+  pad.x = Math.max(0, Math.min(W - pad.w, pad.x));
+
+  if (!ball.live) {
+    ball.x = pad.x + pad.w/2;
+    ball.y = pad.y - BALL_R - 2;
+    stepParticles();
+    return;
+  }
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Walls
+  if (ball.x - BALL_R < 0)  { ball.x = BALL_R;  ball.vx =  Math.abs(ball.vx); SFX.wall(); }
+  if (ball.x + BALL_R > W)  { ball.x = W-BALL_R; ball.vx = -Math.abs(ball.vx); SFX.wall(); }
+  if (ball.y - BALL_R < 0)  { ball.y = BALL_R;  ball.vy =  Math.abs(ball.vy); SFX.wall(); }
+
+  // Paddle
+  if (ball.vy > 0
+      && ball.y + BALL_R >= pad.y
+      && ball.y - BALL_R <  pad.y + PAD_H + 2
+      && ball.x >= pad.x - 4
+      && ball.x <= pad.x + pad.w + 4) {
+    const rel   = (ball.x - (pad.x + pad.w/2)) / (pad.w/2);
+    const angle = rel * 1.15 - Math.PI/2;
+    const spd   = Math.hypot(ball.vx, ball.vy);
+    ball.vx = Math.cos(angle) * spd;
+    ball.vy = Math.sin(angle) * spd;
+    if (ball.vy > -1.5) ball.vy = -1.5;
+    ball.y = pad.y - BALL_R - 1;
+    SFX.paddle();
+    burst(ball.x, ball.y + BALL_R, '#ff9900', 6);
+  }
+
+  // Bricks
+  for (const br of bricks) {
+    if (!br.alive) continue;
+    if (!ballHitsBrick(br)) continue;
+
+    br.hp--;
+    br.shake = 5;
+    SFX.brick(br.tribe.id);
+
+    if (br.hp <= 0) {
+      br.alive = false;
+      score += br.tribe.pts * level;
+      updateHUD();
+      burst(br.x + BW/2, br.y + BH/2, br.tribe.fill, 16);
+    } else {
+      burst(br.x + BW/2, br.y + BH/2, br.tribe.fill, 6);
+    }
+
+    // Bounce direction
+    const ox = Math.min(Math.abs(ball.x - br.x), Math.abs(ball.x - (br.x+BW)));
+    const oy = Math.min(Math.abs(ball.y - br.y), Math.abs(ball.y - (br.y+BH)));
+    if (ox < oy) ball.vx = -ball.vx;
+    else         ball.vy = -ball.vy;
+    break;
+  }
+
+  // Brick shakes
+  for (const br of bricks) if (br.shake > 0) br.shake--;
+
+  // Ball lost
+  if (ball.y - BALL_R > H) {
+    lives--;
+    updateHUD();
+    flashTimer = 20;
+    SFX.lose();
+    if (lives <= 0) {
+      state = 'gameover';
+      showOverlay('💀', 'Game Over!',
+        `You scored <strong>${score}</strong> points at Level ${level}.<br>The dragons escaped into the night…`,
+        '🐉 Try Again!', startGame);
+    } else {
+      resetBall();
+    }
+  }
+
+  // Level clear
+  if (bricks.every(b => !b.alive)) {
+    SFX.win();
+    if (level >= 5) {
+      state = 'win';
+      showOverlay('🏆', 'You Win!',
+        `Outstanding! All 5 levels cleared with <strong>${score}</strong> points!<br>You are a true Dragon Master, Audrey! 🐉🔥`,
+        '🔥 Play Again!', startGame);
+    } else {
+      state = 'levelup';
+      levelUpTimer = 100;
+    }
+  }
+
+  stepParticles();
+}
+
+function stepParticles() {
+  parts = parts.filter(p => p.alpha > 0.01);
+  for (const p of parts) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.09;
+    p.vx *= 0.98;
+    p.alpha -= p.decay;
+    p.r *= 0.975;
+  }
+}
+
+// ── Draw ──────────────────────────────────────────────────────
+function draw() {
+  // Background
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,   '#0d0420');
+  bg.addColorStop(0.6, '#130830');
+  bg.addColorStop(1,   '#1a0a38');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Flash on life loss
+  if (flashTimer > 0) {
+    ctx.fillStyle = `rgba(255,30,30,${flashTimer/20*0.35})`;
+    ctx.fillRect(0,0,W,H);
+    flashTimer--;
+  }
+
+  // Moon glow
+  ctx.save();
+  ctx.fillStyle = 'rgba(220,210,255,0.07)';
+  ctx.beginPath(); ctx.arc(W-45, 38, 50, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(220,210,255,0.13)';
+  ctx.beginPath(); ctx.arc(W-45, 38, 28, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,248,230,0.22)';
+  ctx.beginPath(); ctx.arc(W-45, 38, 17, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // ── Bricks ──
+  for (const br of bricks) {
+    if (!br.alive) continue;
+    const ox = br.shake ? (Math.random()-0.5)*br.shake : 0;
+    const oy = br.shake ? (Math.random()-0.5)*br.shake : 0;
+    const fade = 0.35 + (br.hp / br.maxHp) * 0.65;
+
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.globalAlpha = fade;
+
+    if (br.tribe.glow) {
+      ctx.shadowColor = 'rgba(180,80,255,0.9)';
+      ctx.shadowBlur  = 12;
+    }
+
+    // Body
+    ctx.fillStyle = br.tribe.fill;
+    rrect(br.x, br.y, BW, BH, 5);
+    ctx.fill();
+
+    // Shine top
+    ctx.globalAlpha = fade * 0.45;
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(br.x+3, br.y+2, BW-6, 4);
+
+    // Bottom shadow
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = br.tribe.dark;
+    ctx.fillRect(br.x, br.y+BH-4, BW, 4);
+
+    // Crack if 2-hit
+    if (br.maxHp > 1 && br.hp < br.maxHp) {
+      ctx.globalAlpha = 0.65;
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(br.x + BW*0.28, br.y+3);
+      ctx.lineTo(br.x + BW*0.55, br.y+BH-3);
+      ctx.moveTo(br.x + BW*0.65, br.y+2);
+      ctx.lineTo(br.x + BW*0.45, br.y+BH-2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Particles ──
+  for (const p of parts) {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle   = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur  = 8;
+    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Aim guide ──
+  if (state === 'playing' && !ball.live) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,200,80,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5,7]);
+    ctx.beginPath();
+    ctx.moveTo(ball.x, ball.y - BALL_R);
+    ctx.lineTo(ball.x, Math.max(30, ball.y - 70));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Paddle ──
+  drawPaddle();
+
+  // ── Ball ──
+  if (state === 'playing' || state === 'levelup') drawBall();
+
+  // ── Level-up banner ──
+  if (state === 'levelup') {
+    const prog = 1 - levelUpTimer / 100;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, prog * 5) * (levelUpTimer < 20 ? levelUpTimer/20 : 1);
+    ctx.fillStyle = 'rgba(8,0,26,0.78)';
+    ctx.fillRect(0, H/2-52, W, 104);
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ffaa00'; ctx.shadowBlur = 28;
+    ctx.fillStyle = '#FFE066';
+    ctx.font = `bold ${Math.floor(28 + prog*8)}px Nunito,sans-serif`;
+    ctx.fillText(`🐉 Level ${level + 1}! 🐉`, W/2, H/2 + 8);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#cc99ff';
+    ctx.font = '16px Nunito,sans-serif';
+    ctx.fillText('Keep going, Dragon Master!', W/2, H/2 + 30);
+    ctx.restore();
+  }
+
+  // ── Score pop-up feedback ──
+  // (handled by sidebar HUD)
+}
+
+function drawPaddle() {
+  const { x, y, w } = pad;
+  ctx.save();
+  ctx.shadowColor = 'rgba(180,80,255,0.8)';
+  ctx.shadowBlur  = 18;
+
+  const g = ctx.createLinearGradient(x, y, x, y+PAD_H);
+  g.addColorStop(0,   '#cc77ff');
+  g.addColorStop(0.5, '#8833cc');
+  g.addColorStop(1,   '#5511aa');
+  ctx.fillStyle = g;
+  rrect(x, y, w, PAD_H, 7); ctx.fill();
+
+  // Highlight stripe
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillRect(x+4, y+2, w-8, 4);
+
+  // Eyes
+  ctx.fillStyle = '#FFE066';
+  ctx.shadowColor = '#ffaa00'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(x + w*0.27, y+PAD_H/2, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + w*0.73, y+PAD_H/2, 2.5, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawBall() {
+  ctx.save();
+  ctx.shadowColor = '#ff6600';
+  ctx.shadowBlur  = 22;
+
+  const g = ctx.createRadialGradient(ball.x-2, ball.y-2, 1, ball.x, ball.y, BALL_R);
+  g.addColorStop(0,   '#ffffff');
+  g.addColorStop(0.25,'#ffee44');
+  g.addColorStop(0.65,'#ff8800');
+  g.addColorStop(1,   '#ff2200');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI*2); ctx.fill();
+
+  // Trail
+  if (ball.live) {
+    ctx.shadowBlur = 28;
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#ff4400';
+    ctx.beginPath();
+    ctx.arc(ball.x - ball.vx*1.8, ball.y - ball.vy*1.8, BALL_R*0.65, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function rrect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);    ctx.arcTo(x+w, y,   x+w, y+r,   r);
+  ctx.lineTo(x+w,   y+h-r);ctx.arcTo(x+w, y+h, x+w-r,y+h, r);
+  ctx.lineTo(x+r,   y+h);  ctx.arcTo(x,   y+h, x,   y+h-r, r);
+  ctx.lineTo(x,     y+r);  ctx.arcTo(x,   y,   x+r, y,      r);
+  ctx.closePath();
+}
+
+// ── Game loop ─────────────────────────────────────────────────
+function loop() {
+  update();
+  draw();
+  frameId = requestAnimationFrame(loop);
+}
+
+// ── Input ─────────────────────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouseX = (e.clientX - r.left) * (W / r.width);
+});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect();
+  mouseX = (e.touches[0].clientX - r.left) * (W / r.width);
+}, { passive:false });
+
+canvas.addEventListener('click', () => {
+  if (state === 'playing') launch();
+});
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (state === 'playing') launch();
+}, { passive:false });
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (state === 'playing') launch();
+  }
+  if (e.code === 'ArrowLeft')  { e.preventDefault(); keyLeft  = true; }
+  if (e.code === 'ArrowRight') { e.preventDefault(); keyRight = true; }
+});
+window.addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft')  keyLeft  = false;
+  if (e.code === 'ArrowRight') keyRight = false;
+});
+
+// Initial draw (menu)
+draw();
+</script>
+</body>
+</html>
