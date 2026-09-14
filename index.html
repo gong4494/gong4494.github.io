@@ -110,6 +110,38 @@
     .about-card.outdoor .about-tags span { background:#e8f5e9; color:#2e7d32; }
     .about-card.arts    .about-tags span { background:#fff3e0; color:#e65100; }
 
+    /* ── Gallery ── */
+    .gallery-wall {
+      display:flex; flex-wrap:wrap; gap:28px; justify-content:center;
+    }
+    .polaroid {
+      background:white;
+      padding:14px 14px 52px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.18), 0 2px 4px rgba(0,0,0,0.1);
+      border-radius:3px;
+      width:clamp(220px, 40vw, 300px);
+      transition:transform 0.25s, box-shadow 0.25s;
+      cursor:default;
+      position:relative;
+    }
+    .polaroid:nth-child(odd)  { transform:rotate(-2deg); }
+    .polaroid:nth-child(even) { transform:rotate(1.5deg); }
+    .polaroid:hover { transform:rotate(0deg) scale(1.04) translateY(-6px); box-shadow:0 16px 40px rgba(0,0,0,0.22); z-index:2; }
+    .polaroid img {
+      width:100%; aspect-ratio:3/4; object-fit:cover; object-position:center top;
+      display:block; border-radius:2px;
+    }
+    .polaroid-caption {
+      position:absolute; bottom:0; left:0; right:0;
+      padding:8px 14px 12px;
+      text-align:center;
+      font-family:'Nunito',sans-serif; font-size:0.95rem; font-weight:700;
+      color:#444;
+    }
+    .polaroid-date {
+      font-size:0.72rem; color:#aaa; font-weight:400; display:block; margin-top:2px;
+    }
+
     /* ── Games ── */
     .games-box {
       background:white; border-radius:24px; padding:30px;
@@ -246,6 +278,22 @@
           <span>✂️ Making</span>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Gallery -->
+  <div class="section">
+    <h2 class="section-title">🖼️ Audrey's Gallery</h2>
+    <div class="gallery-wall">
+
+      <div class="polaroid">
+        <img src="images/audrey-butterfly-clip.jpg" alt="Audrey putting on her butterfly hair clip">
+        <div class="polaroid-caption">
+          🦋 My butterfly clip
+          <span class="polaroid-date">Autumn 2026</span>
+        </div>
+      </div>
+
     </div>
   </div>
 
