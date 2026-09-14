@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>找成龙! Find Jackie Chan!</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family:'Nunito',sans-serif;
+      background:linear-gradient(160deg,#8b0000 0%,#5c0000 40%,#2a0000 100%);
+      min-height:100vh; color:white; overflow-x:hidden;
+    }
+    .lanterns { display:flex; justify-content:space-around; padding:10px 20px; font-size:1.8rem; }
+    header { text-align:center; padding:6px 20px 10px; }
+    .title-banner {
+      background:linear-gradient(135deg,#ffd700,#ffaa00);
+      display:inline-block; padding:12px 40px; border-radius:50px;
+      box-shadow:0 5px 0 #8b6800,0 8px 30px rgba(255,180,0,.4);
+      border:3px solid rgba(255,220,50,.5);
+    }
+    .title-banner h1 {
+      font-size:clamp(1.3rem,5vw,2.2rem); font-weight:900;
+      color:#8b0000; text-shadow:1px 1px 0 #ffd700;
+    }
+    .subtitle { margin-top:8px; font-size:clamp(.85rem,2.5vw,1.05rem); font-weight:700; color:#ffd700; }
+    .hud {
+      display:flex; justify-content:center; align-items:center;
+      gap:16px; padding:10px 16px; flex-wrap:wrap;
+    }
+    .hud-pill {
+      background:rgba(0,0,0,.45); border:2px solid rgba(255,215,0,.4);
+      border-radius:30px; padding:6px 16px; text-align:center;
+    }
+    .hud-label { color:#ffaa00; font-size:.7rem; text-transform:uppercase; letter-spacing:1px; }
+    .hud-val   { color:white; font-size:1.25rem; font-weight:900; }
+    #lives-disp { font-size:1.3rem; min-height:26px; }
+    #timer-val.urgent { color:#ff4444; animation:pulse .5s ease-in-out infinite alternate; }
+    @keyframes pulse { to { transform:scale(1.25); display:block; } }
+    .clue-box {
+      text-align:center; padding:6px 16px 8px;
+      font-size:clamp(.85rem,2.5vw,1rem); color:#ffe080; font-weight:700; min-height:28px;
+    }
+    .grid {
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:10px; max-width:580px; margin:0 auto; padding:6px 14px 10px;
+    }
+    .actor-card {
+      background:rgba(0,0,0,.45); border:3px solid rgba(255,215,0,.3);
+      border-radius:14px; padding:8px 6px 6px; text-align:center; cursor:pointer;
+      transition:transform .15s,box-shadow .15s,border-color .15s; position:relative;
+    }
+    .actor-card:hover {
+      transform:translateY(-4px) scale(1.03);
+      border-color:rgba(255,215,0,.8); box-shadow:0 8px 24px rgba(255,180,0,.4);
+    }
+    .actor-card svg { width:100%; height:auto; display:block; }
+    .card-label {
+      margin-top:5px; font-size:clamp(.6rem,1.8vw,.78rem); font-weight:800;
+      color:#ffd700; opacity:0; transition:opacity .3s; line-height:1.3;
+    }
+    .actor-card.revealed .card-label { opacity:1; }
+    .actor-card.wrong-shake {
+      animation:wrongShake .4s ease-in-out;
+      border-color:#ff4444; background:rgba(100,0,0,.6);
+    }
+    @keyframes wrongShake {
+      0%,100%{ transform:translateX(0); }
+      25%    { transform:translateX(-8px) rotate(-2deg); }
+      75%    { transform:translateX(8px)  rotate(2deg); }
+    }
+    .actor-card.correct-glow {
+      border-color:#ffd700; box-shadow:0 0 40px #ffd700;
+      animation:correctPop .4s ease-out;
+    }
+    @keyframes correctPop {
+      0%  { transform:scale(1); }
+      50% { transform:scale(1.1); }
+      100%{ transform:scale(1); }
+    }
+    .overlay {
+      position:fixed; inset:0; z-index:100;
+      background:rgba(0,0,0,.88); display:flex;
+      flex-direction:column; align-items:center; justify-content:center;
+      gap:14px; text-align:center; padding:24px;
+    }
+    .ov-emoji { font-size:clamp(2.5rem,10vw,5rem); animation:float 2s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0) rotate(-3deg);} 50%{transform:translateY(-10px) rotate(3deg);} }
+    .overlay h2 {
+      font-size:clamp(1.3rem,5vw,2.2rem); font-weight:900;
+      color:#ffd700; text-shadow:2px 2px 0 #8b0000;
+    }
+    .overlay p { color:#ffcc88; font-size:clamp(.85rem,2.5vw,1rem); max-width:320px; line-height:1.55; }
+    .ov-btn {
+      padding:13px 36px; background:linear-gradient(135deg,#ffd700,#ffaa00);
+      color:#5c0000; border:none; border-radius:50px;
+      font-family:'Nunito',sans-serif; font-size:1.05rem; font-weight:900;
+      cursor:pointer; box-shadow:0 5px 0 #8b6800;
+      transition:transform .1s,box-shadow .1s;
+    }
+    .ov-btn:active { transform:translateY(4px); box-shadow:0 1px 0 #8b6800; }
+    .confetti-piece {
+      position:fixed; top:-20px; pointer-events:none; z-index:200;
+      animation:confFall linear forwards;
+    }
+    @keyframes confFall { to { transform:translateY(110vh) rotate(720deg); opacity:0; } }
+    .score-flash {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      font-size:3.5rem; font-weight:900; color:#ffd700;
+      text-shadow:0 0 30px #ffd700; pointer-events:none; z-index:300;
+      animation:sPop .9s ease-out forwards;
+    }
+    @keyframes sPop {
+      0%  { opacity:1; transform:translate(-50%,-50%) scale(.5); }
+      50% { opacity:1; transform:translate(-50%,-65%) scale(1.2); }
+      100%{ opacity:0; transform:translate(-50%,-85%) scale(1.5); }
+    }
+    .note { text-align:center; font-size:.68rem; color:rgba(255,200,100,.45); padding:4px 16px 14px; }
+    @media(max-width:400px){ .grid{ gap:7px; padding:4px 8px 8px; } }
+  </style>
+</head>
+<body>
+
+<div class="lanterns">🏮 🏮 🏮 🏮 🏮</div>
+
+<header>
+  <div class="title-banner">
+    <h1>🥋 找成龙! Find Jackie Chan!</h1>
+  </div>
+  <p class="subtitle">Spot Jackie Chan among famous Chinese movie stars! 🎬</p>
+</header>
+
+<div class="hud">
+  <div class="hud-pill"><div class="hud-label">Lives</div><div id="lives-disp">❤️❤️❤️</div></div>
+  <div class="hud-pill"><div class="hud-label">Score</div><div class="hud-val" id="score-disp">0</div></div>
+  <div class="hud-pill"><div class="hud-label">Round</div><div class="hud-val" id="round-disp">1 / 8</div></div>
+  <div class="hud-pill"><div class="hud-label">Time</div><div class="hud-val" id="timer-val">20</div></div>
+</div>
+
+<div class="clue-box" id="clue-box">🔍 Find Jackie Chan! 成龙在哪里?</div>
+<div class="grid" id="grid"></div>
+<div class="note">🎨 Cartoon illustrations — for fun only</div>
+
+<!-- Start overlay -->
+<div class="overlay" id="overlay">
+  <div class="ov-emoji">🥋</div>
+  <h2>找成龙!<br>Find Jackie Chan!</h2>
+  <p>8 rounds · 3 lives · 20 seconds per round<br><br>
+  Tap the right face before time runs out!<br>
+  <em style="color:#ffd700;">Hint: look for the biggest smile! 😁</em></p>
+  <button class="ov-btn" onclick="startGame()">▶ Start! 开始!</button>
+</div>
+
+<script>
+// ── Actor portraits ───────────────────────────────────────────
+const ACTORS = [
+  {
+    id:'jackie', name:'Jackie Chan', zh:'成龙', isTarget:true,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="36" y="99" width="28" height="16" rx="5" fill="#f5c59a"/>
+      <ellipse cx="50" cy="62" rx="40" ry="46" fill="#f5c59a"/>
+      <ellipse cx="11" cy="64" rx="9" ry="13" fill="#f5c59a"/>
+      <ellipse cx="89" cy="64" rx="9" ry="13" fill="#f5c59a"/>
+      <path d="M11 50 Q12 16 50 13 Q88 16 89 50 Q78 22 50 22 Q22 22 11 50Z" fill="#1a0800"/>
+      <path d="M44 13 Q42 22 40 30" stroke="#2a1000" stroke-width="1.5" fill="none"/>
+      <!-- BUSHY arched brows -->
+      <path d="M20 47 Q31 39 44 44" stroke="#1a0800" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+      <path d="M56 44 Q69 39 80 47" stroke="#1a0800" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+      <!-- friendly eyes -->
+      <ellipse cx="32" cy="57" rx="9" ry="6.5" fill="white"/>
+      <ellipse cx="68" cy="57" rx="9" ry="6.5" fill="white"/>
+      <circle cx="32" cy="57" r="5" fill="#2a1500"/>
+      <circle cx="68" cy="57" r="5" fill="#2a1500"/>
+      <circle cx="34" cy="55" r="1.8" fill="white"/>
+      <circle cx="70" cy="55" r="1.8" fill="white"/>
+      <path d="M42 62 Q44 66 41 69" stroke="#e0a070" stroke-width="1.2" fill="none"/>
+      <path d="M58 62 Q56 66 59 69" stroke="#e0a070" stroke-width="1.2" fill="none"/>
+      <!-- round wide nose -->
+      <ellipse cx="50" cy="70" rx="9" ry="7" fill="#e8a878"/>
+      <ellipse cx="44" cy="73" rx="4.5" ry="3.5" fill="#c88058"/>
+      <ellipse cx="56" cy="73" rx="4.5" ry="3.5" fill="#c88058"/>
+      <!-- HUGE open grin (most distinctive!) -->
+      <path d="M22 80 Q50 106 78 80 L76 86 Q50 110 24 86Z" fill="#1a0600"/>
+      <path d="M26 82 Q50 104 74 82 L72 86 Q50 106 28 86Z" fill="#f5f5f5"/>
+      <line x1="36" y1="82.5" x2="35" y2="86" stroke="#d0d0d0" stroke-width=".9"/>
+      <line x1="44" y1="81.5" x2="44" y2="85.5" stroke="#d0d0d0" stroke-width=".9"/>
+      <line x1="50" y1="81" x2="50" y2="85.5" stroke="#d0d0d0" stroke-width=".9"/>
+      <line x1="56" y1="81.5" x2="56" y2="85.5" stroke="#d0d0d0" stroke-width=".9"/>
+      <line x1="64" y1="82.5" x2="65" y2="86" stroke="#d0d0d0" stroke-width=".9"/>
+      <path d="M27 83 Q50 104 73 83" stroke="#ffaaaa" stroke-width="2" fill="none" opacity=".7"/>
+      <!-- ROSY cheeks -->
+      <circle cx="19" cy="75" r="11" fill="#ff9999" opacity=".38"/>
+      <circle cx="81" cy="75" r="11" fill="#ff9999" opacity=".38"/>
+    </svg>`,
+  },
+  {
+    id:'jetli', name:'Jet Li', zh:'李连杰', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="38" y="100" width="24" height="15" rx="4" fill="#f0c090"/>
+      <ellipse cx="50" cy="62" rx="32" ry="44" fill="#f0c090"/>
+      <ellipse cx="18" cy="64" rx="7" ry="10" fill="#f0c090"/>
+      <ellipse cx="82" cy="64" rx="7" ry="10" fill="#f0c090"/>
+      <path d="M19 50 Q20 16 50 14 Q80 16 81 50 Q72 24 50 24 Q28 24 19 50Z" fill="#111"/>
+      <!-- flat straight brows -->
+      <path d="M26 46 Q35 43 44 45" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M56 45 Q65 43 74 46" stroke="#111" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <!-- intense narrow eyes -->
+      <ellipse cx="34" cy="55" rx="8" ry="5" fill="white"/>
+      <ellipse cx="66" cy="55" rx="8" ry="5" fill="white"/>
+      <circle cx="34" cy="55" r="4.5" fill="#1a1000"/>
+      <circle cx="66" cy="55" r="4.5" fill="#1a1000"/>
+      <circle cx="36" cy="53.5" r="1.5" fill="white"/>
+      <circle cx="68" cy="53.5" r="1.5" fill="white"/>
+      <path d="M47 62 L46 72 Q50 76 54 72 L53 62" stroke="#d09060" stroke-width="1.5" fill="none"/>
+      <ellipse cx="46" cy="73" rx="3.5" ry="2.5" fill="#c08050"/>
+      <ellipse cx="54" cy="73" rx="3.5" ry="2.5" fill="#c08050"/>
+      <!-- SERIOUS closed mouth -->
+      <path d="M36 82 Q50 80 64 82" stroke="#c06040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M38 82 Q50 86 62 82" stroke="#c06040" stroke-width="1.5" fill="none"/>
+    </svg>`,
+  },
+  {
+    id:'andylau', name:'Andy Lau', zh:'刘德华', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="37" y="100" width="26" height="15" rx="4" fill="#f2c08a"/>
+      <ellipse cx="50" cy="63" rx="34" ry="44" fill="#f2c08a"/>
+      <ellipse cx="16" cy="65" rx="7" ry="10" fill="#f2c08a"/>
+      <ellipse cx="84" cy="65" rx="7" ry="10" fill="#f2c08a"/>
+      <!-- WAVY styled hair -->
+      <path d="M17 52 Q18 15 50 12 Q82 15 83 52 Q76 20 50 20 Q24 20 17 52Z" fill="#0a0500"/>
+      <path d="M22 25 Q30 20 40 24 Q48 18 58 22 Q68 16 78 22" stroke="#2a1500" stroke-width="2.5" fill="none" opacity=".5"/>
+      <path d="M20 33 Q30 27 42 30 Q50 24 60 28 Q70 23 80 28" stroke="#2a1500" stroke-width="2.5" fill="none" opacity=".5"/>
+      <path d="M24 46 Q34 43 44 46" stroke="#0a0500" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M56 46 Q66 43 76 47" stroke="#0a0500" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="33" cy="57" rx="9" ry="6" fill="white"/>
+      <ellipse cx="67" cy="57" rx="9" ry="6" fill="white"/>
+      <circle cx="33" cy="57" r="5" fill="#1a0d00"/>
+      <circle cx="67" cy="57" r="5" fill="#1a0d00"/>
+      <circle cx="35" cy="55.5" r="1.8" fill="white"/>
+      <circle cx="69" cy="55.5" r="1.8" fill="white"/>
+      <path d="M48 63 L47 72 Q50 75 53 72 L52 63" stroke="#c08050" stroke-width="1.5" fill="none"/>
+      <ellipse cx="47" cy="72.5" rx="3.5" ry="2.5" fill="#b07040"/>
+      <ellipse cx="53" cy="72.5" rx="3.5" ry="2.5" fill="#b07040"/>
+      <!-- charming CLOSED smile + dimples -->
+      <path d="M35 82 Q50 92 65 82" stroke="#c06040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle cx="33" cy="82" r="2.5" fill="#d09070" opacity=".5"/>
+      <circle cx="67" cy="82" r="2.5" fill="#d09070" opacity=".5"/>
+    </svg>`,
+  },
+  {
+    id:'chowyunfat', name:'Chow Yun-fat', zh:'周润发', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="35" y="100" width="30" height="15" rx="5" fill="#e8b070"/>
+      <ellipse cx="50" cy="63" rx="38" ry="44" fill="#e8b070"/>
+      <ellipse cx="12" cy="65" rx="8" ry="12" fill="#e8b070"/>
+      <ellipse cx="88" cy="65" rx="8" ry="12" fill="#e8b070"/>
+      <!-- dark hair with SILVER temples -->
+      <path d="M13 52 Q14 18 50 15 Q86 18 87 52 Q78 24 50 24 Q22 24 13 52Z" fill="#2a2222"/>
+      <path d="M14 44 Q18 34 26 30 Q22 38 20 48Z" fill="#aaaaaa" opacity=".7"/>
+      <path d="M86 44 Q82 34 74 30 Q78 38 80 48Z" fill="#aaaaaa" opacity=".7"/>
+      <path d="M22 47 Q33 43 44 46" stroke="#2a2020" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M56 46 Q67 43 78 47" stroke="#2a2020" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="33" cy="57" rx="9" ry="6" fill="white"/>
+      <ellipse cx="67" cy="57" rx="9" ry="6" fill="white"/>
+      <circle cx="33" cy="57" r="5" fill="#111"/>
+      <circle cx="67" cy="57" r="5" fill="#111"/>
+      <circle cx="35" cy="55.5" r="1.6" fill="white"/>
+      <circle cx="69" cy="55.5" r="1.6" fill="white"/>
+      <ellipse cx="50" cy="70" rx="8" ry="6.5" fill="#d8a060"/>
+      <ellipse cx="44" cy="73" rx="4" ry="3" fill="#b87840"/>
+      <ellipse cx="56" cy="73" rx="4" ry="3" fill="#b87840"/>
+      <!-- one-side smirk -->
+      <path d="M34 83 Q42 80 60 84 Q64 85 66 83" stroke="#b06040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- CIGARETTE -->
+      <rect x="50" y="83" width="22" height="4" rx="2" fill="#f5f0e0"/>
+      <rect x="68" y="83" width="6" height="4" rx="1" fill="#e0d8c0"/>
+      <circle cx="72" cy="85" r="2" fill="#ff6600" opacity=".9"/>
+      <path d="M72 82 Q74 77 72 73" stroke="rgba(200,200,200,.5)" stroke-width="1.5" fill="none"/>
+    </svg>`,
+  },
+  {
+    id:'stephenchow', name:'Stephen Chow', zh:'周星驰', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="37" y="100" width="26" height="15" rx="4" fill="#f3c08a"/>
+      <ellipse cx="50" cy="62" rx="36" ry="44" fill="#f3c08a"/>
+      <ellipse cx="14" cy="63" rx="8" ry="11" fill="#f3c08a"/>
+      <ellipse cx="86" cy="63" rx="8" ry="11" fill="#f3c08a"/>
+      <!-- straight black hair + fringe -->
+      <path d="M15 50 Q16 15 50 12 Q84 15 85 50 Q76 22 50 22 Q24 22 15 50Z" fill="#090500"/>
+      <path d="M28 22 Q38 28 50 25 Q62 28 72 22" stroke="#090500" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <!-- RAISED comedic brows -->
+      <path d="M24 44 Q34 38 44 43" stroke="#090500" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M56 43 Q66 38 76 44" stroke="#090500" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <!-- WIDE comedic eyes -->
+      <ellipse cx="33" cy="56" rx="11" ry="9" fill="white"/>
+      <ellipse cx="67" cy="56" rx="11" ry="9" fill="white"/>
+      <circle cx="33" cy="57" r="6.5" fill="#151000"/>
+      <circle cx="67" cy="57" r="6.5" fill="#151000"/>
+      <circle cx="36" cy="54" r="2.2" fill="white"/>
+      <circle cx="70" cy="54" r="2.2" fill="white"/>
+      <ellipse cx="44.5" cy="71" rx="3.8" ry="3" fill="#c88858"/>
+      <ellipse cx="55.5" cy="71" rx="3.8" ry="3" fill="#c88858"/>
+      <ellipse cx="50" cy="68" rx="8" ry="6" fill="#e0a868"/>
+      <!-- surprised O mouth (not a grin) -->
+      <ellipse cx="50" cy="85" rx="13" ry="10" fill="#1a0800"/>
+      <ellipse cx="50" cy="84" rx="10" ry="7" fill="#cc4444"/>
+      <ellipse cx="50" cy="82" rx="7" ry="4" fill="#ff8888"/>
+    </svg>`,
+  },
+  {
+    id:'donniyen', name:'Donnie Yen', zh:'甄子丹', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="36" y="100" width="28" height="15" rx="3" fill="#e8a868"/>
+      <!-- SQUARE face -->
+      <path d="M16 38 Q18 16 50 14 Q82 16 84 38 L86 82 Q84 100 50 108 Q16 100 14 82Z" fill="#e8a868"/>
+      <rect x="9" y="55" width="10" height="20" rx="4" fill="#e8a868"/>
+      <rect x="81" y="55" width="10" height="20" rx="4" fill="#e8a868"/>
+      <!-- military buzzcut -->
+      <path d="M16 38 Q18 16 50 14 Q82 16 84 38 Q74 26 50 26 Q26 26 16 38Z" fill="#080400"/>
+      <path d="M18 40 Q34 34 50 34 Q66 34 82 40" stroke="#080400" stroke-width="3" fill="none"/>
+      <!-- HEAVY brow ridge -->
+      <path d="M20 48 Q32 44 45 47" stroke="#080400" stroke-width="5.5" fill="none" stroke-linecap="square"/>
+      <path d="M55 47 Q68 44 80 48" stroke="#080400" stroke-width="5.5" fill="none" stroke-linecap="square"/>
+      <!-- fierce narrowed eyes -->
+      <ellipse cx="32" cy="59" rx="9" ry="5" fill="white"/>
+      <ellipse cx="68" cy="59" rx="9" ry="5" fill="white"/>
+      <circle cx="32" cy="59" r="5" fill="#0d0800"/>
+      <circle cx="68" cy="59" r="5" fill="#0d0800"/>
+      <circle cx="34" cy="57.5" r="1.5" fill="white"/>
+      <circle cx="70" cy="57.5" r="1.5" fill="white"/>
+      <path d="M47 65 L46 74 Q50 78 54 74 L53 65" stroke="#c08050" stroke-width="2" fill="none"/>
+      <ellipse cx="46" cy="74.5" rx="4" ry="3" fill="#b07040"/>
+      <ellipse cx="54" cy="74.5" rx="4" ry="3" fill="#b07040"/>
+      <!-- TIGHT pressed lips -->
+      <path d="M36 84 Q50 82 64 84" stroke="#aa5030" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </svg>`,
+  },
+  {
+    id:'tonyleung', name:'Tony Leung', zh:'梁朝伟', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="38" y="100" width="24" height="14" rx="4" fill="#f0bb88"/>
+      <ellipse cx="50" cy="63" rx="33" ry="43" fill="#f0bb88"/>
+      <ellipse cx="17" cy="65" rx="7" ry="10" fill="#f0bb88"/>
+      <ellipse cx="83" cy="65" rx="7" ry="10" fill="#f0bb88"/>
+      <!-- slightly longer hair swept to side -->
+      <path d="M18 52 Q18 14 50 11 Q82 14 82 52 Q74 20 50 20 Q26 20 18 52Z" fill="#0d0600"/>
+      <path d="M26 16 Q36 22 46 20 Q52 14 62 18 Q56 24 50 24 Q38 26 26 16Z" fill="#0d0600"/>
+      <!-- gentle refined brows -->
+      <path d="M26 47 Q36 44 44 46" stroke="#0d0600" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M56 46 Q64 44 74 47" stroke="#0d0600" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <!-- deep soulful eyes -->
+      <ellipse cx="34" cy="57" rx="9" ry="6.5" fill="white"/>
+      <ellipse cx="66" cy="57" rx="9" ry="6.5" fill="white"/>
+      <circle cx="34" cy="57" r="5.5" fill="#151000"/>
+      <circle cx="66" cy="57" r="5.5" fill="#151000"/>
+      <circle cx="36" cy="55" r="1.8" fill="white"/>
+      <circle cx="68" cy="55" r="1.8" fill="white"/>
+      <path d="M48 63 L47 72 Q50 75 53 72 L52 63" stroke="#c09060" stroke-width="1.5" fill="none"/>
+      <ellipse cx="47" cy="72.5" rx="3.5" ry="2.5" fill="#a87848"/>
+      <ellipse cx="53" cy="72.5" rx="3.5" ry="2.5" fill="#a87848"/>
+      <!-- gentle soft smile -->
+      <path d="M37 82 Q50 90 63 82" stroke="#c06040" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>`,
+  },
+  {
+    id:'brucelee', name:'Bruce Lee', zh:'李小龙', isTarget:false,
+    svg:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <rect x="39" y="100" width="22" height="15" rx="3" fill="#e8a860"/>
+      <!-- LEAN/narrow face, pointed chin -->
+      <path d="M22 30 Q24 14 50 12 Q76 14 78 30 L80 72 Q76 104 50 108 Q24 104 20 72Z" fill="#e8a860"/>
+      <ellipse cx="19" cy="62" rx="7" ry="10" fill="#e8a860"/>
+      <ellipse cx="81" cy="62" rx="7" ry="10" fill="#e8a860"/>
+      <!-- very short buzzcut -->
+      <path d="M22 30 Q24 14 50 12 Q76 14 78 30 Q68 22 50 22 Q32 22 22 30Z" fill="#060300"/>
+      <!-- HIGH cheekbones shadow -->
+      <path d="M21 68 Q28 62 36 64" stroke="#c07840" stroke-width="2" fill="none" opacity=".5"/>
+      <path d="M79 68 Q72 62 64 64" stroke="#c07840" stroke-width="2" fill="none" opacity=".5"/>
+      <!-- sharp intense brows -->
+      <path d="M26 44 Q35 41 44 44" stroke="#060300" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M56 44 Q65 41 74 44" stroke="#060300" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <!-- INTENSE focused eyes -->
+      <ellipse cx="34" cy="53" rx="9" ry="5.5" fill="white"/>
+      <ellipse cx="66" cy="53" rx="9" ry="5.5" fill="white"/>
+      <circle cx="34" cy="53" r="5" fill="#0d0600"/>
+      <circle cx="66" cy="53" r="5" fill="#0d0600"/>
+      <circle cx="36" cy="51.5" r="1.6" fill="white"/>
+      <circle cx="68" cy="51.5" r="1.6" fill="white"/>
+      <!-- brow furrow -->
+      <path d="M44 43 L46 47" stroke="#0d0800" stroke-width="1.5" fill="none" opacity=".6"/>
+      <path d="M56 43 L54 47" stroke="#0d0800" stroke-width="1.5" fill="none" opacity=".6"/>
+      <path d="M48 58 L47 68 Q50 72 53 68 L52 58" stroke="#c07840" stroke-width="1.8" fill="none"/>
+      <ellipse cx="47" cy="69" rx="3.5" ry="2.5" fill="#a86830"/>
+      <ellipse cx="53" cy="69" rx="3.5" ry="2.5" fill="#a86830"/>
+      <!-- determined grimace -->
+      <path d="M36 78 Q50 82 64 78" stroke="#aa4020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>`,
+  },
+];
+
+const CLUES = [
+  "🔍 Look for the actor with the BIGGEST smile showing all his teeth!",
+  "😄 He has very thick, bushy eyebrows and a huge open grin!",
+  "🤨 Big bushy brows + giant happy smile — that's the clue!",
+  "😊 Look for rosy round cheeks and the warmest, happiest face!",
+  "🥋 He did ALL his own stunts! Find that big cheerful grin!",
+  "🎬 No one smiles bigger on screen — look for that huge open mouth!",
+  "😁 The most friendly and happy-looking face in the lineup!",
+  "🏆 King of action comedy 成龙 — find that signature huge grin!",
+];
+
+// ── State ──────────────────────────────────────────────────────
+let score=0, lives=3, round=0, timeLeft=20;
+let timerInterval=null, roundActive=false, wrongsThisRound=0;
+const TOTAL_ROUNDS=8, MAX_WRONG=2;
+
+// ── Audio ──────────────────────────────────────────────────────
+let ac=null;
+function tone(freq,dur,vol,type){
+  try{
+    if(!ac) ac=new(window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==='suspended') ac.resume();
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    o.type=type||'square';o.frequency.value=freq;
+    const t=ac.currentTime;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vol||.12,t+.01);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.start(t);o.stop(t+dur+.02);
+  }catch(e){}
+}
+const SFX={
+  correct(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.16,.14,'triangle'),i*80)); },
+  wrong(){   [330,220].forEach((f,i)=>setTimeout(()=>tone(f,.2,.12,'sawtooth'),i*150)); },
+  urgent(){  tone(880,.1,.1,'square'); },
+  gameover(){ [220,196,175,165].forEach((f,i)=>setTimeout(()=>tone(f,.25,.14,'sawtooth'),i*140)); },
+  win(){     [523,659,784,1047,1318].forEach((f,i)=>setTimeout(()=>tone(f,.18,.15,'triangle'),i*90)); },
+};
+
+// ── Confetti ───────────────────────────────────────────────────
+const CC=['#ffd700','#ff4444','#ff9900','#ffffff','#ff69b4','#00ccff','#44ff44'];
+function confetti(n){
+  for(let i=0;i<n;i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    const sz=6+Math.random()*10;
+    el.style.cssText=`left:${Math.random()*100}vw;background:${CC[Math.floor(Math.random()*CC.length)]};width:${sz}px;height:${sz*1.4}px;border-radius:${Math.random()<.4?'50%':'2px'};animation-duration:${1.2+Math.random()*1.8}s;animation-delay:${Math.random()*.5}s;transform:rotate(${Math.random()*360}deg)`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3000);
+  }
+}
+function scoreFlash(pts){
+  const el=document.createElement('div');
+  el.className='score-flash';
+  el.textContent='+'+pts;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),950);
+}
+
+// ── HUD ────────────────────────────────────────────────────────
+function updateHUD(){
+  document.getElementById('score-disp').textContent=score;
+  document.getElementById('round-disp').textContent=round+' / '+TOTAL_ROUNDS;
+  document.getElementById('lives-disp').textContent=lives>0?'❤️'.repeat(lives):'💔';
+}
+function updateTimer(){
+  const el=document.getElementById('timer-val');
+  el.textContent=timeLeft;
+  el.classList.toggle('urgent',timeLeft<=5);
+}
+
+// ── Timer ──────────────────────────────────────────────────────
+function startTimer(){
+  clearInterval(timerInterval);
+  timeLeft=20; updateTimer();
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateTimer();
+    if(timeLeft<=5) SFX.urgent();
+    if(timeLeft<=0){ clearInterval(timerInterval); onTimeUp(); }
+  },1000);
+}
+function stopTimer(){ clearInterval(timerInterval); }
+
+// ── Grid ───────────────────────────────────────────────────────
+function buildGrid(pool){
+  const g=document.getElementById('grid');
+  g.innerHTML='';
+  pool.forEach(a=>{
+    const c=document.createElement('div');
+    c.className='actor-card'; c.dataset.id=a.id;
+    c.innerHTML=a.svg+`<div class="card-label">${a.name}<br><span style="font-size:.9em;color:#ffcc88;">${a.zh}</span></div>`;
+    c.addEventListener('click',()=>onCardClick(a,c));
+    g.appendChild(c);
+  });
+}
+
+// ── Start game ─────────────────────────────────────────────────
+function startGame(){
+  score=0; lives=3; round=0;
+  document.getElementById('overlay').style.display='none';
+  updateHUD(); nextRound();
+}
+
+// ── Next round ─────────────────────────────────────────────────
+function nextRound(){
+  round++; wrongsThisRound=0;
+  if(round>TOTAL_ROUNDS){ endGame(true); return; }
+  const clueEl=document.getElementById('clue-box');
+  clueEl.textContent=CLUES[round-1]||CLUES[0];
+  clueEl.style.color='';
+  updateHUD();
+  const others=ACTORS.filter(a=>!a.isTarget).sort(()=>Math.random()-.5).slice(0,5);
+  const pool=[...others,ACTORS.find(a=>a.isTarget)].sort(()=>Math.random()-.5);
+  buildGrid(pool);
+  roundActive=true; startTimer();
+}
+
+// ── Click handler ──────────────────────────────────────────────
+function onCardClick(actor,card){
+  if(!roundActive) return;
+  if(actor.isTarget){
+    roundActive=false; stopTimer();
+    card.classList.add('correct-glow','revealed');
+    document.querySelectorAll('.actor-card').forEach(c=>{ c.classList.add('revealed'); c.style.pointerEvents='none'; });
+    const pts=Math.max(10,timeLeft*5+20);
+    score+=pts; updateHUD();
+    SFX.correct(); confetti(80); scoreFlash(pts);
+    setTimeout(()=>{ if(round<TOTAL_ROUNDS) nextRound(); else endGame(true); },2000);
+  } else {
+    wrongsThisRound++; lives--;
+    card.classList.add('wrong-shake','revealed');
+    card.style.pointerEvents='none';
+    SFX.wrong(); updateHUD();
+    const cbox=document.getElementById('clue-box');
+    const prev=cbox.textContent;
+    cbox.textContent='❌ That\'s '+actor.name+' ('+actor.zh+')! Try again!';
+    cbox.style.color='#ff8888';
+    setTimeout(()=>{ if(roundActive){ cbox.textContent=prev; cbox.style.color=''; } },1800);
+    setTimeout(()=>card.classList.remove('wrong-shake'),450);
+    if(lives<=0){ roundActive=false; stopTimer(); setTimeout(()=>endGame(false),800); return; }
+    if(wrongsThisRound>=MAX_WRONG){
+      roundActive=false; stopTimer(); revealJackie();
+      setTimeout(nextRound,2200);
+    }
+  }
+}
+
+function revealJackie(){
+  document.querySelectorAll('.actor-card').forEach(c=>{
+    if(c.dataset.id==='jackie') c.classList.add('revealed','correct-glow');
+    c.style.pointerEvents='none';
+  });
+}
+
+function onTimeUp(){
+  if(!roundActive) return;
+  roundActive=false; lives--; updateHUD();
+  const cbox=document.getElementById('clue-box');
+  cbox.textContent="⏰ Time's up! That was Jackie Chan! 成龙!";
+  cbox.style.color='#ff8888';
+  revealJackie();
+  if(lives<=0){ setTimeout(()=>endGame(false),1800); return; }
+  setTimeout(nextRound,2200);
+}
+
+function endGame(won){
+  stopTimer();
+  const maxScore=TOTAL_ROUNDS*(20*5+20), pct=Math.round(score/maxScore*100);
+  let emoji,title,msg;
+  if(pct>=80)      { emoji='🏆'; title='Dragon Master! 成龙大师!'; msg='You found Jackie almost every time! Amazing! 🥋'; SFX.win(); confetti(120); }
+  else if(pct>=50) { emoji='🥋'; title='Well done! 很棒!';         msg='You\'re getting great at spotting Jackie! 😄'; SFX.win(); confetti(60); }
+  else             { emoji='😄'; title='Good try! 加油!';           msg='Look for the biggest smile and bushy brows next time!'; SFX.gameover(); }
+  const ov=document.getElementById('overlay');
+  ov.innerHTML=`<div class="ov-emoji">${emoji}</div><h2>${title}</h2><p>Score: <strong style="color:#ffd700;">${score}</strong> points in ${round} round${round>1?'s':''}!<br><em style="color:#ffcc88;">${msg}</em></p><button class="ov-btn" onclick="startGame()">🔄 Play Again! 再玩一次!</button>`;
+  ov.style.display='flex';
+}
+</script>
+</body>
+</html>
