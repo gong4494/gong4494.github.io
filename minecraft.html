@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Craft World ⛏️</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+body{background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;}
+#c{display:block;width:100vw;height:100vh;}
+
+/* ── Start overlay ── */
+#overlay{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;
+  background:linear-gradient(180deg,#1a6b2a 0%,#0d3b15 100%);
+  z-index:20;color:#fff;
+}
+#overlay h1{font-size:clamp(2rem,6vw,3.2rem);font-weight:900;text-shadow:0 4px 14px rgba(0,0,0,.6);letter-spacing:2px;}
+#overlay p{color:#b6e8c4;font-size:.9rem;text-align:center;max-width:380px;line-height:1.7;}
+.menu-btn{
+  padding:13px 42px;border:none;border-radius:12px;font-size:1.1rem;
+  font-weight:800;cursor:pointer;transition:transform .1s,filter .1s;
+}
+.menu-btn:hover{filter:brightness(1.15);transform:translateY(-2px);}
+#btn-start{background:#4caf50;color:#fff;box-shadow:0 5px 0 #2e7d32;}
+#btn-creative{background:#fb8c00;color:#fff;box-shadow:0 5px 0 #e65100;}
+.mode-row{display:flex;gap:12px;}
+
+/* ── Pause ── */
+#pause{
+  position:fixed;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;
+  background:rgba(0,0,0,.7);z-index:20;color:#fff;
+}
+#pause h2{font-size:2.2rem;font-weight:900;}
+#btn-resume{padding:12px 38px;background:#4caf50;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 4px 0 #2e7d32;}
+.pause-hint{color:#999;font-size:.85rem;}
+
+/* ── Crosshair ── */
+#xhair{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  pointer-events:none;display:none;z-index:5;
+  width:20px;height:20px;
+}
+#xhair::before,#xhair::after{
+  content:'';position:absolute;background:rgba(255,255,255,.9);
+  box-shadow:0 0 3px rgba(0,0,0,.8);
+}
+#xhair::before{width:2px;height:100%;left:50%;transform:translateX(-50%);}
+#xhair::after{height:2px;width:100%;top:50%;transform:translateY(-50%);}
+
+/* ── HUD ── */
+#hud{
+  position:fixed;bottom:0;left:0;right:0;
+  display:none;flex-direction:column;align-items:center;
+  padding-bottom:10px;z-index:5;pointer-events:none;
+}
+#info-row{
+  display:flex;gap:14px;margin-bottom:5px;font-size:11px;
+  color:rgba(255,255,255,.8);text-shadow:0 1px 3px rgba(0,0,0,.9);
+}
+#hotbar{
+  display:flex;gap:3px;padding:5px;
+  background:rgba(0,0,0,.55);border-radius:10px;
+  pointer-events:all;
+}
+.slot{
+  width:48px;height:48px;border-radius:7px;border:2px solid rgba(255,255,255,.25);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;transition:border-color .1s,background .1s;
+}
+.slot.active{border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.5);}
+.slot:hover:not(.active){border-color:rgba(255,255,255,.5);}
+.slot-ico{font-size:20px;line-height:1;}
+.slot-num{position:absolute;top:2px;left:4px;font-size:9px;color:rgba(255,255,255,.6);}
+.slot-lbl{font-size:7.5px;color:rgba(255,255,255,.75);margin-top:1px;}
+
+/* ── Mining progress overlay ── */
+#mine-bar{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  width:120px;height:7px;background:rgba(0,0,0,.4);border-radius:4px;
+  display:none;z-index:6;overflow:hidden;
+}
+#mine-fill{height:100%;background:#f4a261;border-radius:4px;width:0;transition:width .05s linear;}
+
+/* ── Top-left mode badge ── */
+#mode-badge{
+  position:fixed;top:8px;left:10px;font-size:11px;
+  color:rgba(255,255,255,.55);z-index:6;pointer-events:none;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- ── Start Overlay ── -->
+<div id="overlay">
+  <h1>⛏️ Craft World</h1>
+  <p>
+    <b>WASD</b> — Move &nbsp;|&nbsp; <b>Space</b> — Jump &nbsp;|&nbsp; <b>Shift</b> — Sprint<br>
+    <b>Left click</b> — Mine &nbsp;|&nbsp; <b>Right click</b> — Place block<br>
+    <b>1–8</b> or <b>scroll</b> — Select block &nbsp;|&nbsp; <b>F</b> — Fly mode<br>
+    <b>Escape</b> — Pause
+  </p>
+  <div class="mode-row">
+    <button class="menu-btn" id="btn-start"    onclick="startGame(false)">⚔️ Survival</button>
+    <button class="menu-btn" id="btn-creative" onclick="startGame(true)">🎨 Creative</button>
+  </div>
+</div>
+
+<!-- ── Pause Screen ── -->
+<div id="pause">
+  <h2>⏸ Paused</h2>
+  <span class="pause-hint">Press Escape or click to resume</span>
+  <button id="btn-resume" onclick="resume()">▶ Resume</button>
+</div>
+
+<!-- ── Crosshair ── -->
+<div id="xhair"></div>
+
+<!-- ── HUD ── -->
+<div id="hud">
+  <div id="info-row">
+    <span id="pos-txt"></span>
+    <span id="tgt-txt"></span>
+    <span id="mode-txt"></span>
+  </div>
+  <div id="hotbar"></div>
+</div>
+<div id="mine-bar"><div id="mine-fill"></div></div>
+<div id="mode-badge"></div>
+
+<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  WORLD CONFIG
+// ═══════════════════════════════════════════════════════════════
+const WX=64, WY=16, WZ=64;
+const REACH    = 6;
+const GRAVITY  = 22;
+const JUMP_SPD = 9;
+const WALK_SPD = 5;
+const SPRINT_SPD = 9;
+const FLY_SPD  = 12;
+
+// ═══════════════════════════════════════════════════════════════
+//  BLOCK DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const BD = {
+   0: null,
+   1: {n:'Grass',  col:0x5a8a3e, ico:'🌿'},
+   2: {n:'Dirt',   col:0x7a5533, ico:'🟫'},
+   3: {n:'Stone',  col:0x888888, ico:'🪨'},
+   4: {n:'Wood',   col:0x6b4e2e, ico:'🪵'},
+   5: {n:'Leaves', col:0x2d7030, ico:'🍃', tr:true, op:0.88},
+   6: {n:'Sand',   col:0xd4c77a, ico:'🏖️'},
+   7: {n:'Planks', col:0xc49a35, ico:'🟧'},
+   8: {n:'Glass',  col:0x88ccff, ico:'🔷', tr:true, op:0.38},
+   9: {n:'Brick',  col:0x994422, ico:'🧱'},
+  10: {n:'Snow',   col:0xeeeeff, ico:'❄️'},
+  11: {n:'Water',  col:0x1a6faf, ico:'💧', tr:true, op:0.6, noMine:true},
+  12: {n:'Gravel', col:0x999999, ico:'⬜'},
+  13: {n:'Coal',   col:0x333333, ico:'⬛'},
+};
+// Mine time seconds per block type
+const MINE_T = {1:.45,2:.4,3:1.1,4:.8,5:.25,6:.35,7:.55,8:.4,9:.9,10:.2,12:.5,13:1.2};
+// Hotbar ids shown to player
+const HOTBAR = [1,2,3,4,5,6,7,9];
+
+function isSolid(t){ return t > 0 && t !== 11; } // water not solid
+
+// ═══════════════════════════════════════════════════════════════
+//  THREE.JS SETUP
+// ═══════════════════════════════════════════════════════════════
+const canvas   = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.Fog(0x87ceeb, 28, 90);
+
+const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 200);
+
+// Lights
+const ambLight = new THREE.AmbientLight(0xffffff, 0.55);
+scene.add(ambLight);
+
+const sun = new THREE.DirectionalLight(0xfff5d6, 1.3);
+sun.position.set(40, 80, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near   =  1;
+sun.shadow.camera.far    = 200;
+sun.shadow.camera.left   = -48;
+sun.shadow.camera.right  =  48;
+sun.shadow.camera.top    =  48;
+sun.shadow.camera.bottom = -48;
+scene.add(sun);
+scene.add(sun.target);
+
+// Sun visual sphere
+const sunSphere = new THREE.Mesh(
+  new THREE.SphereGeometry(4,16,16),
+  new THREE.MeshBasicMaterial({color:0xfff5a0})
+);
+sunSphere.position.set(100,160,70);
+scene.add(sunSphere);
+
+// Clouds (simple flat white boxes)
+const cloudMat = new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.75});
+for(let i=0;i<12;i++){
+  const w=Math.random()*12+6, d=Math.random()*5+3;
+  const cm = new THREE.Mesh(new THREE.BoxGeometry(w,1,d), cloudMat);
+  cm.position.set(Math.random()*WX, WY+2+Math.random()*3, Math.random()*WZ);
+  scene.add(cm);
+}
+
+function onResize(){
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+}
+onResize();
+window.addEventListener('resize', onResize);
+
+// ═══════════════════════════════════════════════════════════════
+//  WORLD DATA
+// ═══════════════════════════════════════════════════════════════
+const world = new Uint8Array(WX*WY*WZ);
+let   dirty = false;
+
+function wI(x,y,z){ return x*WY*WZ + y*WZ + z; }
+
+function getB(x,y,z){
+  if(x<0||x>=WX||y<0||y>=WY||z<0||z>=WZ) return y<0?1:0;
+  return world[wI(x,y,z)];
+}
+function setB(x,y,z,t){
+  if(x<0||x>=WX||y<0||y>=WY||z<0||z>=WZ) return;
+  world[wI(x,y,z)] = t;
+  dirty = true;
+}
+function setRaw(x,y,z,t){
+  if(x<0||x>=WX||y<0||y>=WY||z<0||z>=WZ) return;
+  world[wI(x,y,z)] = t;
+}
+
+// Block visible = has at least one air neighbor
+function visible(x,y,z){
+  return !getB(x+1,y,z)||!getB(x-1,y,z)||
+         !getB(x,y+1,z)||!getB(x,y-1,z)||
+         !getB(x,y,z+1)||!getB(x,y,z-1);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TERRAIN GENERATION
+// ═══════════════════════════════════════════════════════════════
+function heightAt(x,z){
+  let h = 6;
+  h += Math.sin(x*.13+1.1)*Math.cos(z*.11)*3;
+  h += Math.sin(x*.07-.6)*Math.cos(z*.09+2.1)*4.5;
+  h += Math.sin(x*.03+z*.04)*2;
+  h += Math.cos(x*.05-z*.06+.7)*1.5;
+  return Math.max(2,Math.min(WY-3,Math.round(h)));
+}
+
+function generateTerrain(){
+  for(let x=0;x<WX;x++) for(let z=0;z<WZ;z++){
+    const h = heightAt(x,z);
+    const isSand = h<=3;
+    const isSnow = h>=12;
+    for(let y=0;y<=h;y++){
+      let t;
+      if(y===h)            t = isSnow?10 : isSand?6 : 1; // surface
+      else if(y>=h-3)      t = isSand?6:2;                // dirt
+      else if(y>=1)        t = (Math.random()<.05)?12:3;  // stone (5% gravel)
+      else                 t = 3;                          // bedrock layer (stone)
+      setRaw(x,y,z,t);
+    }
+    // Embed coal veins underground
+    if(h>5){
+      for(let y=1;y<h-4;y++){
+        if(Math.random()<.03) setRaw(x,y,z,13);
+      }
+    }
+    // Water in low basins
+    for(let y=h+1;y<=3;y++) setRaw(x,y,z,11);
+  }
+  // Trees
+  for(let x=3;x<WX-4;x+=4) for(let z=3;z<WZ-4;z+=4){
+    const ox = x + Math.floor(Math.sin(x*7.3+z*2.1)*1.5);
+    const oz = z + Math.floor(Math.cos(x*3.7+z*5.9)*1.5);
+    const h  = heightAt(ox,oz);
+    if(h>4 && h<12 && Math.random()<.6) placeTree(ox,h+1,oz);
+  }
+}
+
+function placeTree(x,by,z){
+  const th = 3+Math.floor(Math.random()*2);
+  for(let i=0;i<th;i++) setRaw(x,by+i,z,4);
+  const top=by+th;
+  for(let dy=-1;dy<=2;dy++){
+    const r=dy<1?2:1;
+    for(let dx=-r;dx<=r;dx++) for(let dz=-r;dz<=r;dz++){
+      if(Math.abs(dx)+Math.abs(dz)+Math.abs(dy)>r+1) continue;
+      if(!getB(x+dx,top+dy,z+dz)) setRaw(x+dx,top+dy,z+dz,5);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INSTANCE MESH SYSTEM
+// ═══════════════════════════════════════════════════════════════
+const MAX_I = WX*WY*WZ;
+const meshes  = {};  // type→InstancedMesh
+const iPos    = {};  // type→[{x,y,z}]  lookup for raycasting
+const dummy   = new THREE.Object3D();
+const BOX_GEO = new THREE.BoxGeometry(1,1,1);
+
+function makeGrassGeo(){
+  // BoxGeometry face order: +x=0,-x=1,+y=2,-y=3,+z=4,-z=5 (4 verts each)
+  const geo = new THREE.BoxGeometry(1,1,1);
+  const n   = geo.attributes.position.count; // 24
+  const col = new Float32Array(n*3);
+  const top  = [0.36,0.56,0.24]; // green
+  const side = [0.48,0.33,0.20]; // brown
+  for(let f=0;f<6;f++){
+    const c=f===2?top:side;
+    for(let v=0;v<4;v++){const i=(f*4+v)*3;col[i]=c[0];col[i+1]=c[1];col[i+2]=c[2];}
+  }
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  return geo;
+}
+
+function buildMeshes(){
+  for(const [id,def] of Object.entries(BD)){
+    const t=+id; if(!def) continue;
+    const geo = t===1 ? makeGrassGeo() : BOX_GEO;
+    const mat = new THREE.MeshLambertMaterial({
+      color        : t===1 ? 0xffffff : def.col,
+      vertexColors : t===1,
+      transparent  : !!def.tr,
+      opacity      : def.op??1,
+      side         : def.tr ? THREE.DoubleSide : THREE.FrontSide,
+    });
+    const mesh = new THREE.InstancedMesh(geo,mat,MAX_I);
+    mesh.count = 0;
+    mesh.castShadow    = true;
+    mesh.receiveShadow = true;
+    meshes[t] = mesh;
+    iPos[t]   = [];
+    scene.add(mesh);
+  }
+}
+
+function rebuildInstances(){
+  for(const t of Object.keys(meshes)){ meshes[+t].count=0; iPos[+t]=[]; }
+  for(let x=0;x<WX;x++) for(let y=0;y<WY;y++) for(let z=0;z<WZ;z++){
+    const t=world[wI(x,y,z)];
+    if(!t||!meshes[t]) continue;
+    if(!visible(x,y,z)) continue;
+    const idx=meshes[t].count;
+    dummy.position.set(x,y,z);
+    dummy.updateMatrix();
+    meshes[t].setMatrixAt(idx,dummy.matrix);
+    meshes[t].count++;
+    iPos[t].push({x,y,z});
+  }
+  for(const t of Object.keys(meshes)) meshes[+t].instanceMatrix.needsUpdate=true;
+  dirty=false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BLOCK HIGHLIGHT + BREAK EFFECT
+// ═══════════════════════════════════════════════════════════════
+const hlMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(1.015,1.015,1.015),
+  new THREE.MeshBasicMaterial({color:0x000000,wireframe:true,transparent:true,opacity:.45})
+);
+hlMesh.visible = false;
+scene.add(hlMesh);
+
+const brkMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(1.02,1.02,1.02),
+  new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0})
+);
+brkMesh.visible = false;
+scene.add(brkMesh);
+
+// ═══════════════════════════════════════════════════════════════
+//  DDA RAY TRAVERSAL
+// ═══════════════════════════════════════════════════════════════
+function castRay(maxD){
+  const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  const p=camera.position;
+  let cx=Math.floor(p.x), cy=Math.floor(p.y), cz=Math.floor(p.z);
+  const sx=dir.x>=0?1:-1, sy=dir.y>=0?1:-1, sz=dir.z>=0?1:-1;
+  const tdx=Math.abs(1/(dir.x||1e-9)), tdy=Math.abs(1/(dir.y||1e-9)), tdz=Math.abs(1/(dir.z||1e-9));
+  let tx=dir.x>0?(cx+1-p.x)*tdx:(p.x-cx)*tdx;
+  let ty=dir.y>0?(cy+1-p.y)*tdy:(p.y-cy)*tdy;
+  let tz=dir.z>0?(cz+1-p.z)*tdz:(p.z-cz)*tdz;
+  let face={x:0,y:0,z:0}, dist=0;
+  while(dist<maxD){
+    const b=getB(cx,cy,cz);
+    if(b && b!==11) return {x:cx,y:cy,z:cz,face:{...face},block:b};
+    if(tx<=ty && tx<=tz){ cx+=sx; dist=tx; tx+=tdx; face={x:-sx,y:0,z:0}; }
+    else if(ty<=tz)      { cy+=sy; dist=ty; ty+=tdy; face={x:0,y:-sy,z:0}; }
+    else                 { cz+=sz; dist=tz; tz+=tdz; face={x:0,y:0,z:-sz}; }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PLAYER
+// ═══════════════════════════════════════════════════════════════
+const EYE_H = 1.62, TOT_H = 1.8, HALF_W = 0.3;
+
+const player = {
+  pos: new THREE.Vector3(WX/2, 10, WZ/2),
+  vel: new THREE.Vector3(),
+  yaw: 0, pitch: 0,
+  onGround: false,
+};
+
+function pFeet(){ return player.pos.y - EYE_H; }
+
+function collides(pos){
+  const fy=pos.y-EYE_H;
+  const top=fy+TOT_H-0.01;
+  for(let dx=-1;dx<=1;dx+=2) for(let dz=-1;dz<=1;dz+=2){
+    const bx=Math.floor(pos.x+dx*HALF_W), bz=Math.floor(pos.z+dz*HALF_W);
+    for(let by=Math.floor(fy+.001);by<=Math.floor(top);by++){
+      if(isSolid(getB(bx,by,bz))) return true;
+    }
+  }
+  return false;
+}
+
+function updatePlayer(dt){
+  const sprint=(keys['ShiftLeft']||keys['ShiftRight']);
+  const spd=sprint?SPRINT_SPD:WALK_SPD;
+  const fwd=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
+  const rgt=new THREE.Vector3( Math.cos(player.yaw),0,-Math.sin(player.yaw));
+  let mx=0,mz=0;
+  if(keys['KeyW']){mx+=fwd.x;mz+=fwd.z;}
+  if(keys['KeyS']){mx-=fwd.x;mz-=fwd.z;}
+  if(keys['KeyA']){mx-=rgt.x;mz-=rgt.z;}
+  if(keys['KeyD']){mx+=rgt.x;mz+=rgt.z;}
+  const len=Math.sqrt(mx*mx+mz*mz);
+  if(len>0){mx/=len;mz/=len;}
+  player.vel.x=mx*spd;
+  player.vel.z=mz*spd;
+
+  player.vel.y-=GRAVITY*dt;
+  player.vel.y=Math.max(player.vel.y,-40);
+
+  if(keys['Space']&&player.onGround){player.vel.y=JUMP_SPD;player.onGround=false;}
+
+  player.onGround=false;
+  // X
+  const nx=player.pos.clone(); nx.x+=player.vel.x*dt;
+  if(!collides(nx)) player.pos.x=nx.x; else player.vel.x=0;
+  // Y
+  const ny=player.pos.clone(); ny.y+=player.vel.y*dt;
+  if(!collides(ny)) player.pos.y=ny.y;
+  else{if(player.vel.y<0)player.onGround=true; player.vel.y=0;}
+  // Z
+  const nz=player.pos.clone(); nz.z+=player.vel.z*dt;
+  if(!collides(nz)) player.pos.z=nz.z; else player.vel.z=0;
+
+  player.pos.x=Math.max(.4,Math.min(WX-.4,player.pos.x));
+  player.pos.z=Math.max(.4,Math.min(WZ-.4,player.pos.z));
+  if(player.pos.y<-5){player.pos.set(WX/2,12,WZ/2);player.vel.set(0,0,0);}
+}
+
+let flyMode=false;
+function updateFly(dt){
+  const spd=FLY_SPD;
+  const fwd=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
+  const rgt=new THREE.Vector3( Math.cos(player.yaw),0,-Math.sin(player.yaw));
+  let mx=0,my=0,mz=0;
+  if(keys['KeyW']){mx+=fwd.x;mz+=fwd.z;}
+  if(keys['KeyS']){mx-=fwd.x;mz-=fwd.z;}
+  if(keys['KeyA']){mx-=rgt.x;mz-=rgt.z;}
+  if(keys['KeyD']){mx+=rgt.x;mz+=rgt.z;}
+  if(keys['Space'])        my= 1;
+  if(keys['ShiftLeft']||keys['ShiftRight']) my=-1;
+  const len=Math.sqrt(mx*mx+mz*mz);
+  if(len>0){mx/=len;mz/=len;}
+  player.pos.x+=mx*spd*dt;
+  player.pos.y+=my*spd*dt;
+  player.pos.z+=mz*spd*dt;
+  player.vel.set(0,0,0);
+  player.onGround=false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════════════════
+const keys={};
+let hotSlot=0, gameLive=false, paused_=false, creative=false;
+
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(!gameLive) return;
+  if(e.code.startsWith('Digit')){
+    const n=parseInt(e.code[5])-1;
+    if(n>=0&&n<HOTBAR.length) setSlot(n);
+  }
+  if(e.code==='Escape') paused_?resume():pause_();
+  if(e.code==='KeyF'){flyMode=!flyMode;document.getElementById('mode-badge').textContent=flyMode?'✈️ Fly':'⚔️ Survival';}
+  e.preventDefault();
+});
+document.addEventListener('keyup',e=>{keys[e.code]=false;});
+
+document.addEventListener('mousemove',e=>{
+  if(!gameLive||paused_||!document.pointerLockElement) return;
+  const s=.0022;
+  player.yaw  -=e.movementX*s;
+  player.pitch-=e.movementY*s;
+  player.pitch=Math.max(-Math.PI/2+.05,Math.min(Math.PI/2-.05,player.pitch));
+});
+
+let mineIv=null, mineProgress=0, mineTarget=null;
+
+document.addEventListener('mousedown',e=>{
+  if(!gameLive||paused_) return;
+  if(e.button===0) startMine();
+  if(e.button===2) doPlace();
+});
+document.addEventListener('mouseup',e=>{if(e.button===0) stopMine();});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('wheel',e=>{
+  if(!gameLive) return;
+  setSlot((hotSlot+(e.deltaY>0?1:-1)+HOTBAR.length)%HOTBAR.length);
+},{passive:true});
+
+canvas.addEventListener('click',()=>{
+  if(gameLive&&!paused_) canvas.requestPointerLock();
+});
+document.addEventListener('pointerlockchange',()=>{
+  if(!document.pointerLockElement&&gameLive&&!paused_) pause_();
+});
+
+function setSlot(n){
+  hotSlot=n;
+  document.querySelectorAll('.slot').forEach((s,i)=>s.classList.toggle('active',i===n));
+}
+
+// ─── Mining ─────────────────────────────────────────────────────
+function startMine(){
+  mineProgress=0; mineTarget=null; stopMine();
+  const hit=castRay(REACH);
+  if(!hit||BD[hit.block]?.noMine) return;
+  mineTarget=hit;
+  if(creative){
+    setB(hit.x,hit.y,hit.z,0); playFx('mine'); return;
+  }
+  const time=(MINE_T[hit.block]??1.0)*1000;
+  const steps=12;
+  const iv=time/steps;
+  document.getElementById('mine-bar').style.display='block';
+  mineIv=setInterval(()=>{
+    const cur=castRay(REACH);
+    if(!cur||cur.x!==mineTarget.x||cur.y!==mineTarget.y||cur.z!==mineTarget.z){stopMine();return;}
+    mineProgress+=1/steps;
+    document.getElementById('mine-fill').style.width=(mineProgress*100)+'%';
+    brkMesh.material.opacity=mineProgress*.55;
+    if(mineProgress>=1){
+      setB(mineTarget.x,mineTarget.y,mineTarget.z,0);
+      playFx('mine'); stopMine();
+    }
+  },iv);
+}
+function stopMine(){
+  clearInterval(mineIv); mineIv=null; mineProgress=0;
+  document.getElementById('mine-bar').style.display='none';
+  document.getElementById('mine-fill').style.width='0';
+  brkMesh.visible=false; brkMesh.material.opacity=0; mineTarget=null;
+}
+function doPlace(){
+  const hit=castRay(REACH); if(!hit) return;
+  const px=hit.x+hit.face.x, py=hit.y+hit.face.y, pz=hit.z+hit.face.z;
+  if(py<0||py>=WY) return;
+  // Don't place inside player
+  const fy=Math.floor(pFeet()), ty=Math.floor(pFeet()+TOT_H);
+  const pfx=Math.floor(player.pos.x), pfz=Math.floor(player.pos.z);
+  if(px===pfx&&pz===pfz&&py>=fy&&py<=ty) return;
+  setB(px,py,pz,HOTBAR[hotSlot]); playFx('place');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════════════════════
+let actx;
+function getACtx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();return actx;}
+function playFx(t){
+  try{
+    const ctx=getACtx(); if(ctx.state==='suspended') ctx.resume();
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    if(t==='mine'){
+      o.type='square'; o.frequency.value=110;
+      g.gain.setValueAtTime(.25,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.1);
+      o.start(); o.stop(ctx.currentTime+.1);
+    } else {
+      o.type='sine';
+      o.frequency.setValueAtTime(500,ctx.currentTime);
+      o.frequency.linearRampToValueAtTime(700,ctx.currentTime+.06);
+      g.gain.setValueAtTime(.18,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.1);
+      o.start(); o.stop(ctx.currentTime+.1);
+    }
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════════════════════════
+function buildHotbar(){
+  const hb=document.getElementById('hotbar'); hb.innerHTML='';
+  HOTBAR.forEach((id,i)=>{
+    const d=BD[id];
+    const s=document.createElement('div');
+    s.className='slot'+(i===0?' active':'');
+    s.style.background=`#${d.col.toString(16).padStart(6,'0')}55`;
+    s.innerHTML=`<span class="slot-num">${i+1}</span><span class="slot-ico">${d.ico}</span><span class="slot-lbl">${d.n}</span>`;
+    s.onclick=()=>setSlot(i);
+    hb.appendChild(s);
+  });
+}
+
+let tgt=null;
+function updateHUD(){
+  const px=Math.floor(player.pos.x),py=Math.floor(pFeet()),pz=Math.floor(player.pos.z);
+  document.getElementById('pos-txt').textContent=`📍 ${px}, ${py}, ${pz}`;
+  document.getElementById('tgt-txt').textContent=tgt?`🎯 ${BD[tgt.block]?.n??'?'}`:'';
+  document.getElementById('mode-txt').textContent=creative?'🎨 Creative':'';
+  if(mineTarget){
+    brkMesh.position.set(mineTarget.x,mineTarget.y,mineTarget.z);
+    brkMesh.visible=true;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GAME STATES
+// ═══════════════════════════════════════════════════════════════
+function startGame(isCreative){
+  creative=isCreative; flyMode=isCreative;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('xhair').style.display='block';
+  document.getElementById('mode-badge').textContent=isCreative?'🎨 Creative':'';
+  gameLive=true; paused_=false;
+  canvas.requestPointerLock();
+}
+function pause_(){
+  paused_=true;
+  document.getElementById('pause').style.display='flex';
+  document.exitPointerLock();
+}
+function resume(){
+  paused_=false;
+  document.getElementById('pause').style.display='none';
+  canvas.requestPointerLock();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PARTICLE SYSTEM  (simple block break puffs)
+// ═══════════════════════════════════════════════════════════════
+const particles=[];
+const pGeo=new THREE.SphereGeometry(.12,4,4);
+function spawnPuffs(x,y,z,col){
+  for(let i=0;i<8;i++){
+    const pm=new THREE.Mesh(pGeo,new THREE.MeshBasicMaterial({color:col}));
+    pm.position.set(x+.5,y+.5,z+.5);
+    const vx=(Math.random()-.5)*4, vy=Math.random()*3+1, vz=(Math.random()-.5)*4;
+    scene.add(pm);
+    particles.push({m:pm,vx,vy,vz,life:1});
+  }
+}
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.m.position.x+=p.vx*dt; p.m.position.y+=p.vy*dt; p.m.position.z+=p.vz*dt;
+    p.vy-=12*dt; p.life-=dt*1.8;
+    p.m.material.opacity=Math.max(0,p.life);
+    p.m.material.transparent=true;
+    if(p.life<=0){scene.remove(p.m);particles.splice(i,1);}
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════════════════════════════════════
+let lastT=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min((ts-lastT)/1000,.1); lastT=ts;
+
+  if(!gameLive||paused_){renderer.render(scene,camera);return;}
+
+  if(dirty) rebuildInstances();
+
+  flyMode ? updateFly(dt) : updatePlayer(dt);
+  updateParticles(dt);
+
+  // Camera
+  camera.position.copy(player.pos);
+  camera.rotation.order='YXZ';
+  camera.rotation.y=player.yaw;
+  camera.rotation.x=player.pitch;
+
+  // Target block highlight
+  tgt=castRay(REACH);
+  if(tgt){ hlMesh.position.set(tgt.x,tgt.y,tgt.z); hlMesh.visible=true; }
+  else    { hlMesh.visible=false; }
+
+  // Sun follows player for consistent shadows
+  sun.position.set(player.pos.x+40,80,player.pos.z+30);
+  sun.target.position.set(player.pos.x,0,player.pos.z);
+  sun.target.updateMatrixWorld();
+
+  updateHUD();
+  renderer.render(scene,camera);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+function init(){
+  generateTerrain();
+  buildMeshes();
+  rebuildInstances();
+  buildHotbar();
+  // Spawn above terrain
+  for(let y=WY-1;y>=0;y--){
+    if(getB(Math.floor(WX/2),y,Math.floor(WZ/2))){
+      player.pos.set(WX/2,y+1+EYE_H+.5,WZ/2);
+      break;
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
+</body>
+</html>

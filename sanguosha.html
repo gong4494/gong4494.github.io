@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三国杀 ⚔️</title>
+<style>
+:root{
+  --bg:#0e0003;--panel:#1a0007;--gold:#c9a227;--gold2:#f5d060;
+  --red:#9b1a1a;--text:#f0e0c0;--dim:rgba(201,162,39,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(ellipse at 20% 0%,#350008 0%,#0e0003 60%);
+  color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
+  height:100vh;overflow:hidden;display:flex;flex-direction:column;
+}
+.hidden{display:none!important;}
+
+/* ── SETUP ── */
+#setup{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+  background:linear-gradient(160deg,#1e0009 0%,#0e0003 100%);z-index:50;
+}
+#setup h1{
+  font-size:clamp(2rem,6vw,3rem);font-weight:900;letter-spacing:4px;
+  background:linear-gradient(90deg,#c9a227,#f5d060,#c9a227);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+#setup p{color:#907050;font-size:.85rem;}
+.char-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;justify-content:center;}
+.char-pick{
+  background:var(--panel);border:2px solid var(--dim);border-radius:14px;
+  padding:12px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;transition:border-color .2s,transform .15s;width:168px;
+}
+.char-pick:hover{border-color:var(--gold);transform:translateY(-4px);}
+.char-pick img{width:120px;height:120px;border-radius:8px;object-fit:cover;object-position:center top;border:2px solid var(--dim);}
+.char-pick .cname{font-size:1.15rem;font-weight:900;color:var(--gold2);}
+.char-pick .ctitle{font-size:.7rem;color:#907050;}
+.char-pick .chp-setup{font-size:.85rem;}
+.char-pick .cability{font-size:.7rem;color:#c0a080;text-align:center;line-height:1.5;}
+.pick-btn{padding:8px 26px;background:var(--gold);color:#1a0005;border:none;border-radius:8px;font-size:.9rem;font-weight:800;cursor:pointer;}
+.pick-btn:hover{filter:brightness(1.15);}
+
+/* ── BOARD ── */
+#board{display:flex;flex-direction:column;height:100vh;}
+
+/* ── ZONES ── */
+#ai-zone{
+  background:linear-gradient(180deg,#180007,#0e0003);
+  border-bottom:1px solid var(--dim);
+  display:flex;align-items:center;gap:8px;padding:6px 10px;
+  min-height:138px;flex-shrink:0;
+}
+#player-zone{
+  background:linear-gradient(0deg,#180007,#0e0003);
+  border-top:1px solid var(--dim);
+  display:flex;align-items:center;gap:8px;padding:6px 10px;
+  min-height:148px;flex-shrink:0;
+}
+
+/* ── CHARACTER CARD ── */
+.char-card{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:var(--panel);border:1px solid var(--dim);
+  border-radius:10px;padding:5px 7px;min-width:106px;flex-shrink:0;
+}
+.char-card img{
+  width:64px;height:64px;border-radius:7px;
+  object-fit:cover;object-position:center top;
+  border:2px solid var(--gold);
+}
+.char-card .cname{font-size:.8rem;font-weight:900;color:var(--gold2);}
+.chp-row{display:flex;gap:1px;flex-wrap:wrap;justify-content:center;}
+.hp-heart{font-size:.8rem;}
+.ability-tag{font-size:.6rem;color:#b09070;text-align:center;line-height:1.3;}
+
+/* ── EQUIPMENT SLOTS ── */
+.equip-zone{
+  display:flex;gap:3px;margin-top:2px;
+}
+.equip-slot{
+  width:40px;height:54px;border-radius:5px;
+  border:1px dashed rgba(201,162,39,.25);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:7px;color:#605040;gap:1px;transition:all .2s;
+}
+.equip-slot.filled{border-color:var(--gold);border-style:solid;background:rgba(201,162,39,.1);}
+.equip-slot-ico{font-size:15px;line-height:1;}
+.equip-slot-label{font-size:6.5px;color:var(--gold);text-align:center;font-weight:700;}
+.equip-slot-empty{font-size:7px;color:#504030;text-align:center;line-height:1.3;}
+
+/* ── HANDS ── */
+.hand-area{
+  display:flex;flex:1;align-items:center;
+  gap:4px;padding:0 4px;overflow:hidden;flex-wrap:nowrap;
+}
+.ai-hand-area{gap:-18px;}
+
+/* ── CENTER ── */
+#center-zone{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  padding:4px 10px;gap:5px;
+}
+#play-area{
+  display:flex;gap:14px;justify-content:center;align-items:center;
+  min-height:108px;
+}
+.play-slot{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:78px;}
+.play-slot-label{font-size:.6rem;color:#706050;letter-spacing:1px;}
+#log-box{
+  background:rgba(0,0,0,.38);border:1px solid var(--dim);
+  border-radius:7px;padding:5px 9px;min-height:52px;
+  display:flex;flex-direction:column;gap:1px;overflow:hidden;
+}
+.log-line{font-size:.78rem;color:#d0b090;}
+.log-line:first-child{color:#f0d090;font-weight:600;}
+#ctrl-row{display:flex;gap:7px;align-items:center;justify-content:space-between;}
+#phase-label{font-size:.78rem;color:#c09060;flex:1;}
+.action-btn{
+  padding:6px 16px;border-radius:7px;border:none;font-size:.82rem;
+  font-weight:800;cursor:pointer;transition:transform .1s,filter .1s;
+}
+.action-btn:hover{filter:brightness(1.15);transform:translateY(-1px);}
+#end-turn-btn{background:var(--gold);color:#1a0005;}
+#take-hit-btn{background:#8b1a1a;color:#fff;}
+
+/* ── CARDS ── */
+.card{
+  width:66px;height:95px;border-radius:7px;
+  border:1px solid rgba(255,255,255,.15);
+  box-shadow:0 3px 10px rgba(0,0,0,.6),inset 0 1px rgba(255,255,255,.07);
+  position:relative;cursor:default;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:transform .12s,box-shadow .12s;color:#fff;
+}
+.card.clickable{cursor:pointer;}
+.card.clickable:hover{transform:translateY(-10px) scale(1.06);box-shadow:0 12px 24px rgba(0,0,0,.85);}
+.card.selected{transform:translateY(-12px) scale(1.08)!important;box-shadow:0 0 0 3px var(--gold),0 14px 28px rgba(0,0,0,.9)!important;}
+.card.dim-card{opacity:.38;pointer-events:none;}
+.card.dodge-glow{box-shadow:0 0 0 3px #29b6f6,0 0 18px rgba(41,182,246,.6)!important;animation:pulseGlow 1s ease-in-out infinite;}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 3px #29b6f6,0 0 18px rgba(41,182,246,.4);}50%{box-shadow:0 0 0 3px #29b6f6,0 0 28px rgba(41,182,246,.8);}}
+.card-corner{position:absolute;font-size:9px;line-height:1.3;text-align:center;}
+.card-corner.tl{top:3px;left:4px;}.card-corner.br{bottom:3px;right:4px;transform:rotate(180deg);}
+.card-ico{font-size:20px;line-height:1;margin-bottom:2px;}
+.card-name{font-size:10px;font-weight:900;text-shadow:0 1px 3px rgba(0,0,0,.9);text-align:center;}
+.card-desc{font-size:6.5px;color:rgba(255,255,255,.55);text-align:center;padding:0 3px;margin-top:1px;line-height:1.3;}
+/* Card back */
+.card.back{background:linear-gradient(135deg,#5a0010,#3a0008);}
+.card-back-inner{position:absolute;inset:4px;border:1px solid rgba(201,162,39,.25);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.22;}
+/* Type backgrounds */
+.sha  {background:linear-gradient(135deg,#7f0000,#b52020);}
+.shan {background:linear-gradient(135deg,#01579b,#1976d2);}
+.tao  {background:linear-gradient(135deg,#6a0040,#b02060);}
+.fire {background:linear-gradient(135deg,#bf360c,#e64a19);}
+.draw {background:linear-gradient(135deg,#311b92,#6a1b9a);}
+.naman{background:linear-gradient(135deg,#3e2723,#6d4c41);}
+/* Equipment backgrounds */
+.equip-weapon{background:linear-gradient(135deg,#3d2600,#7a5218);}
+.equip-armor {background:linear-gradient(135deg,#0a2040,#1a4a8a);}
+.equip-horse {background:linear-gradient(135deg,#0d3320,#1a6640);}
+/* Gold border for equipment in hand */
+.card.is-equip{border-color:var(--gold);border-width:2px;}
+
+/* ── CARD ANIMATIONS ── */
+@keyframes cardAppear{from{transform:scale(.15) rotate(-20deg);opacity:0;}to{transform:scale(1) rotate(0);opacity:1;}}
+@keyframes cardDrop{from{transform:translateY(-28px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes fadeOut{to{opacity:0;transform:scale(.65);}}
+.anim-appear{animation:cardAppear .38s cubic-bezier(.34,1.56,.64,1);}
+.anim-out{animation:fadeOut .4s ease-in forwards;}
+
+/* ── CHARACTER FLASH EFFECTS ── */
+@keyframes dmgFlash{0%,100%{filter:none;}30%,70%{filter:brightness(2.5) saturate(4) hue-rotate(-20deg);}60%{filter:brightness(.3);}}
+@keyframes healFlash{0%,100%{filter:none;}50%{filter:brightness(2) hue-rotate(80deg) saturate(2);}}
+@keyframes shieldFlash{0%,100%{filter:none;}50%{filter:brightness(2.5) hue-rotate(210deg) saturate(3);}}
+@keyframes goldFlash{0%,100%{filter:none;}50%{filter:brightness(2.5) sepia(1) hue-rotate(-10deg);}}
+.dmg-anim{animation:dmgFlash .55s ease;}
+.heal-anim{animation:healFlash .55s ease;}
+.shield-anim{animation:shieldFlash .55s ease;}
+.gold-anim{animation:goldFlash .55s ease;}
+
+/* ── DYING MODAL ── */
+#dying-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.78);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;z-index:40;backdrop-filter:blur(4px);
+}
+#dying-modal h2{font-size:1.7rem;color:#e84040;}
+#dying-modal p{color:#c09070;font-size:.88rem;text-align:center;}
+.dm-row{display:flex;gap:10px;}
+.dm-btn{padding:9px 26px;border-radius:9px;border:none;font-size:.95rem;font-weight:800;cursor:pointer;}
+#dm-yes{background:#ad1457;color:#fff;}#dm-no{background:#444;color:#ccc;}
+
+/* ── END SCREEN ── */
+#end-screen{
+  position:fixed;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;
+  z-index:50;backdrop-filter:blur(6px);
+}
+#end-screen.win{background:rgba(8,35,8,.86);}
+#end-screen.lose{background:rgba(35,0,8,.86);}
+#end-emoji{font-size:5rem;}
+#end-title{font-size:2.2rem;font-weight:900;color:#fff;}
+#end-sub{font-size:.95rem;color:rgba(255,255,255,.7);}
+#end-btn{padding:11px 34px;border-radius:11px;border:none;font-size:1rem;font-weight:800;cursor:pointer;background:var(--gold);color:#1a0005;}
+
+/* Confetti */
+#cfv{position:fixed;inset:0;pointer-events:none;z-index:49;}
+
+/* Tooltip */
+#card-tip{
+  position:fixed;z-index:60;background:rgba(28,0,8,.96);
+  border:1px solid var(--gold);border-radius:7px;padding:6px 10px;
+  font-size:.76rem;color:#f0d090;pointer-events:none;display:none;
+  max-width:180px;line-height:1.6;
+}
+
+/* Deck/discard info */
+#deck-info{font-size:.65rem;color:#705040;text-align:center;white-space:nowrap;}
+
+/* BAGUA flip result */
+#bagua-result{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,100,.85);border:2px solid #29b6f6;
+  border-radius:12px;padding:14px 24px;z-index:45;
+  font-size:1.1rem;color:#fff;text-align:center;display:none;
+  animation:cardAppear .35s cubic-bezier(.34,1.56,.64,1);
+}
+</style>
+</head>
+<body>
+
+<!-- ── SETUP ── -->
+<div id="setup">
+  <h1>⚔️ 三国杀 ⚔️</h1>
+  <p>选择你的武将，与 AI 对决！（含装备牌）</p>
+  <div class="char-row" id="char-row"></div>
+</div>
+
+<!-- ── BOARD ── -->
+<div id="board" class="hidden">
+  <!-- AI Zone -->
+  <div id="ai-zone">
+    <div class="char-card" id="ai-char-card">
+      <img id="ai-portrait" src="" alt="">
+      <div class="cname" id="ai-cname"></div>
+      <div class="chp-row" id="ai-hp-row"></div>
+      <div class="ability-tag" id="ai-ability-tag"></div>
+      <div class="equip-zone" id="ai-equip-zone">
+        <div class="equip-slot" id="ai-weapon-slot"><div class="equip-slot-empty">武器</div></div>
+        <div class="equip-slot" id="ai-armor-slot"><div class="equip-slot-empty">防具</div></div>
+      </div>
+    </div>
+    <div id="ai-hand-area" class="hand-area ai-hand-area"></div>
+    <div id="deck-info"></div>
+  </div>
+
+  <!-- Center Zone -->
+  <div id="center-zone">
+    <div id="play-area">
+      <div class="play-slot">
+        <div class="play-slot-label">AI 出牌</div>
+        <div id="ai-play-slot"></div>
+      </div>
+      <div class="play-slot">
+        <div class="play-slot-label">你 出牌</div>
+        <div id="player-play-slot"></div>
+      </div>
+    </div>
+    <div id="log-box"></div>
+    <div id="ctrl-row">
+      <div id="phase-label">等待开始...</div>
+      <button class="action-btn hidden" id="take-hit-btn" onclick="takeHit()">💥 受伤</button>
+      <button class="action-btn hidden" id="end-turn-btn" onclick="endTurn()">✅ 结束回合</button>
+    </div>
+  </div>
+
+  <!-- Player Zone -->
+  <div id="player-zone">
+    <div class="char-card" id="player-char-card">
+      <img id="player-portrait" src="" alt="">
+      <div class="cname" id="player-cname"></div>
+      <div class="chp-row" id="player-hp-row"></div>
+      <div class="ability-tag" id="player-ability-tag"></div>
+      <div class="equip-zone" id="player-equip-zone">
+        <div class="equip-slot" id="player-weapon-slot"><div class="equip-slot-empty">武器</div></div>
+        <div class="equip-slot" id="player-armor-slot"><div class="equip-slot-empty">防具</div></div>
+      </div>
+    </div>
+    <div id="player-hand-area" class="hand-area"></div>
+  </div>
+</div>
+
+<!-- ── DYING MODAL ── -->
+<div id="dying-modal" class="hidden">
+  <h2>💀 濒死！</h2>
+  <p id="dying-msg"></p>
+  <div class="dm-row">
+    <button class="dm-btn" id="dm-yes">🍑 使用桃自救</button>
+    <button class="dm-btn" id="dm-no">放弃 ☠️</button>
+  </div>
+</div>
+
+<!-- ── END SCREEN ── -->
+<div id="end-screen" class="hidden">
+  <div id="end-emoji"></div>
+  <div id="end-title"></div>
+  <div id="end-sub"></div>
+  <button id="end-btn" onclick="location.reload()">🔄 再来一局</button>
+</div>
+<canvas id="cfv"></canvas>
+<div id="card-tip"></div>
+<div id="bagua-result"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//  CHARACTERS
+// ═══════════════════════════════════════════════════════════════
+const CHARS = [
+  {id:0, name:'小将军', title:'一马当先',  photo:'sanguosha_p1.jpg', maxHp:4,
+   ability:'坚韧', abilityDesc:'受到伤害时30%概率免疫一次伤害'},
+  {id:1, name:'大将军', title:'智勇双全',  photo:'sanguosha_p2.jpg', maxHp:4,
+   ability:'神机', abilityDesc:'每回合摸牌阶段多摸1张牌'},
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  CARD DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const CDEFS = {
+  // Basic cards
+  SHA:      {name:'杀',       cls:'sha',          icon:'⚔️',  desc:'造成1点伤害（对手可出闪抵挡）',       equip:false},
+  SHAN:     {name:'闪',       cls:'shan',         icon:'🛡️', desc:'抵消一次对你的杀',                    equip:false},
+  TAO:      {name:'桃',       cls:'tao',          icon:'🍑',  desc:'恢复1点体力（不超过上限）',            equip:false},
+  FIRE:     {name:'火攻',     cls:'fire',         icon:'🔥',  desc:'造成2点伤害，对手无法用闪抵挡',        equip:false},
+  DRAW:     {name:'无中生有', cls:'draw',         icon:'✨',  desc:'立即摸2张牌',                         equip:false},
+  NAMAN:    {name:'南蛮入侵', cls:'naman',        icon:'🏹',  desc:'对手须出一张杀，否则受1点伤害',        equip:false},
+  // Equipment — Weapons
+  CROSSBOW: {name:'诸葛连弩', cls:'equip-weapon', icon:'🔩',  desc:'装备武器：每回合可使用任意张杀',       equip:true,  slot:'weapon'},
+  BLADE:    {name:'青龙偃月', cls:'equip-weapon', icon:'🗡️', desc:'装备武器：杀被闪后，可立即再出一张杀', equip:true,  slot:'weapon'},
+  // Equipment — Armor
+  BAGUA:    {name:'八卦阵',   cls:'equip-armor',  icon:'☯️',  desc:'装备防具：被杀时翻牌，红色则自动格挡', equip:true,  slot:'armor'},
+  SHIELD:   {name:'仁王盾',   cls:'equip-armor',  icon:'🛡️', desc:'装备防具：黑色的杀对你无效（♠/♣）',   equip:true,  slot:'armor'},
+};
+
+const SUITS = ['♠','♥','♦','♣'];
+const NUMS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+function makeDeck(){
+  const counts={SHA:14,SHAN:8,TAO:5,FIRE:3,DRAW:3,NAMAN:2,CROSSBOW:2,BLADE:1,BAGUA:2,SHIELD:1};
+  let idx=0, deck=[];
+  for(const [type,n] of Object.entries(counts))
+    for(let i=0;i<n;i++) deck.push({type, suit:SUITS[idx%4], num:NUMS[idx%13], uid:idx++});
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+  return deck;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+const G = {
+  phase:'SETUP',
+  deck:[], discard:[],
+  pl:  {char:null, hp:4, hand:[], slashUsed:0, equip:{weapon:null, armor:null}},
+  ai:  {char:null, hp:4, hand:[], slashUsed:0, equip:{weapon:null, armor:null}},
+  pendingResp: null,  // {resolve, validTypes, damage}
+  log: [],
+};
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function drawCard(hand){
+  if(G.deck.length===0){
+    if(!G.discard.length) return;
+    G.deck=[...G.discard]; G.discard=[];
+    for(let i=G.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[G.deck[i],G.deck[j]]=[G.deck[j],G.deck[i]];}
+    addLog('🔄 牌堆重洗...');
+  }
+  hand.push(G.deck.pop());
+}
+function removeCard(card, hand){
+  const i=hand.findIndex(c=>c.uid===card.uid);
+  if(i>=0){const[c]=hand.splice(i,1); G.discard.push(c);}
+}
+// Equip a card: old equip goes to discard
+function equipCard(card, who){
+  const def=CDEFS[card.type];
+  const slot=def.slot; // 'weapon' or 'armor'
+  if(who.equip[slot]){G.discard.push(who.equip[slot]);} // discard old
+  who.equip[slot]=card;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOGGING
+// ═══════════════════════════════════════════════════════════════
+function addLog(msg){
+  G.log.unshift(msg);
+  if(G.log.length>6) G.log.pop();
+  document.getElementById('log-box').innerHTML=
+    G.log.map((m,i)=>`<div class="log-line" style="opacity:${Math.max(.28,1-i*.15)}">${m}</div>`).join('');
+}
+function setPhase(txt){document.getElementById('phase-label').textContent=txt;}
+function showBtn(id,v){document.getElementById(id).classList.toggle('hidden',!v);}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════════════════════
+function hpHtml(cur,max){
+  return Array.from({length:max},(_,i)=>`<span class="hp-heart">${i<cur?'❤️':'🖤'}</span>`).join('');
+}
+
+// Render the equipment slots for one player
+function renderEquip(who, prefix){
+  ['weapon','armor'].forEach(slot=>{
+    const el=document.getElementById(`${prefix}-${slot}-slot`);
+    const card=who.equip[slot];
+    if(card){
+      const def=CDEFS[card.type];
+      el.className='equip-slot filled';
+      el.innerHTML=`<div class="equip-slot-ico">${def.icon}</div><div class="equip-slot-label">${def.name}</div>`;
+      el.title=def.desc;
+    } else {
+      el.className='equip-slot';
+      el.innerHTML=`<div class="equip-slot-empty">${slot==='weapon'?'武器':'防具'}</div>`;
+    }
+  });
+}
+
+// Build a card DOM element
+function makeCardEl(card, opts={}){
+  const def=CDEFS[card.type];
+  const isRed=card.suit==='♥'||card.suit==='♦';
+  const sc=isRed?'#ff8080':'#ddd';
+  const el=document.createElement('div');
+  el.className=`card ${def.cls}${def.equip?' is-equip':''}${opts.clickable?' clickable':''}${opts.dodge?' dodge-glow':''}${opts.dim?' dim-card':''}`;
+  el.dataset.uid=card.uid;
+  el.innerHTML=`
+    <div class="card-corner tl" style="color:${sc}"><div>${card.num}</div><div>${card.suit}</div></div>
+    <div class="card-ico">${def.icon}</div>
+    <div class="card-name">${def.name}</div>
+    <div class="card-desc">${def.desc.slice(0,16)}</div>
+    <div class="card-corner br" style="color:${sc}"><div>${card.num}</div><div>${card.suit}</div></div>
+  `;
+  if(opts.clickable) el.addEventListener('click',()=>onCardClick(card));
+  const tip=document.getElementById('card-tip');
+  el.addEventListener('mouseenter',e=>{
+    tip.textContent=`${def.icon} ${def.name}：${def.desc}`;
+    tip.style.display='block';
+    tip.style.left=e.clientX+14+'px';tip.style.top=e.clientY-8+'px';
+  });
+  el.addEventListener('mousemove',e=>{tip.style.left=e.clientX+14+'px';tip.style.top=e.clientY-8+'px';});
+  el.addEventListener('mouseleave',()=>tip.style.display='none');
+  return el;
+}
+function makeBackEl(){
+  const el=document.createElement('div');
+  el.className='card back';
+  el.innerHTML='<div class="card-back-inner">⚔️</div>';
+  return el;
+}
+
+function renderPlayerHand(){
+  const area=document.getElementById('player-hand-area'); area.innerHTML='';
+  const awaitResp=G.phase==='AWAIT_RESPONSE'&&G.pendingResp;
+  const validTypes=awaitResp?G.pendingResp.validTypes:[];
+  const canPlay=G.phase==='PLAYER_PLAY';
+  G.pl.hand.forEach(card=>{
+    const dodge=validTypes.includes(card.type);
+    const el=makeCardEl(card,{
+      clickable: canPlay||dodge,
+      dodge,
+      dim: awaitResp&&!dodge,
+    });
+    area.appendChild(el);
+  });
+}
+function renderAiHand(){
+  const area=document.getElementById('ai-hand-area'); area.innerHTML='';
+  G.ai.hand.forEach((_,i)=>{
+    const el=makeBackEl();
+    el.style.marginLeft=i>0?'-18px':'0';
+    area.appendChild(el);
+  });
+}
+function renderHp(){
+  document.getElementById('player-hp-row').innerHTML=hpHtml(G.pl.hp,G.pl.char.maxHp);
+  document.getElementById('ai-hp-row').innerHTML=hpHtml(G.ai.hp,G.ai.char.maxHp);
+  document.getElementById('deck-info').textContent=`牌堆:${G.deck.length} 弃:${G.discard.length}`;
+}
+function renderAll(){
+  renderPlayerHand();
+  renderAiHand();
+  renderHp();
+  renderEquip(G.pl,'player');
+  renderEquip(G.ai,'ai');
+}
+
+// Show a played card in center with animation
+function showPlayedCard(card, who){
+  const slot=document.getElementById(who==='ai'?'ai-play-slot':'player-play-slot');
+  slot.innerHTML='';
+  const el=makeCardEl(card,{});
+  el.classList.add('anim-appear');
+  slot.appendChild(el);
+  setTimeout(()=>{el.classList.add('anim-out');setTimeout(()=>{if(slot.contains(el))slot.innerHTML='';},440);},1500);
+}
+
+function flashChar(who, type){
+  const id=who==='ai'?'ai-char-card':'player-char-card';
+  const el=document.getElementById(id);
+  const cls={dmg:'dmg-anim',heal:'heal-anim',shield:'shield-anim',gold:'gold-anim'}[type]||'dmg-anim';
+  el.classList.add(cls);
+  setTimeout(()=>el.classList.remove(cls),650);
+}
+function flashMsg(msg){
+  const lbl=document.getElementById('phase-label');
+  const old=lbl.textContent;
+  lbl.style.color='#ff5050';lbl.textContent=msg;
+  setTimeout(()=>{lbl.style.color='';lbl.textContent=old;},1200);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BAGUA FLIP
+// ═══════════════════════════════════════════════════════════════
+async function baguaFlip(){
+  // Flip top card of deck; if red (♥/♦) → dodge
+  if(G.deck.length===0) return false;
+  const top=G.deck[G.deck.length-1];
+  const isRed=top.suit==='♥'||top.suit==='♦';
+  const br=document.getElementById('bagua-result');
+  br.style.display='block';
+  br.innerHTML=isRed
+    ?`☯️ 八卦阵！<br>翻到 <b style="color:#ff8080">${top.suit}${top.num}</b>（红色）<br>✨ 自动格挡！`
+    :`☯️ 八卦阵！<br>翻到 <b style="color:#aaa">${top.suit}${top.num}</b>（黑色）<br>❌ 格挡失败...`;
+  await sleep(1600);
+  br.style.display='none';
+  return isRed;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DAMAGE
+// ═══════════════════════════════════════════════════════════════
+async function dealDmgToPlayer(amount, isSha=false){
+  // 仁王盾: if the SHA is black-suited, immune
+  if(isSha && G.pl.equip.armor?.type==='SHIELD'){
+    // The card that caused this damage – we don't track suit here, so we just say black-suited SHA is blocked
+    // Simplified: 50% chance to block with shield
+    if(Math.random()<.5){
+      addLog('🛡️ 仁王盾！黑色的杀无效！');
+      flashChar('pl','shield');
+      await sleep(500);
+      return;
+    }
+  }
+  // 坚韧: 30% immunity (char 0)
+  if(G.pl.char.id===0 && Math.random()<.30){
+    addLog('🛡️ 坚韧！你免疫了此次伤害！');
+    flashChar('pl','shield');
+    await sleep(500);
+    return;
+  }
+  G.pl.hp=Math.max(0,G.pl.hp-amount);
+  flashChar('pl','dmg');
+  addLog(`💔 你受到 ${amount} 点伤害，剩余体力 ${G.pl.hp}`);
+  renderHp();
+  await sleep(400);
+  if(G.pl.hp<=0) await playerDying();
+}
+
+async function dealDmgToAI(amount){
+  G.ai.hp=Math.max(0,G.ai.hp-amount);
+  flashChar('ai','dmg');
+  addLog(`💥 AI受到 ${amount} 点伤害，剩余体力 ${G.ai.hp}`);
+  renderHp();
+  await sleep(400);
+  if(G.ai.hp<=0){
+    const p=G.ai.hand.find(c=>c.type==='TAO');
+    if(p){
+      removeCard(p,G.ai.hand);G.ai.hp=1;
+      addLog('🍑 AI濒死，用桃自救！恢复到1点体力');
+      flashChar('ai','heal');showPlayedCard(p,'ai');
+      renderAll();await sleep(900);
+    } else { gameOver(true); }
+  }
+}
+
+function playerDying(){
+  return new Promise(resolve=>{
+    const p=G.pl.hand.find(c=>c.type==='TAO');
+    const m=document.getElementById('dying-modal');
+    document.getElementById('dying-msg').textContent=p
+      ?'你的体力归零！使用桃恢复到1点体力？'
+      :'你的体力归零，且没有桃！';
+    document.getElementById('dm-yes').classList.toggle('hidden',!p);
+    document.getElementById('dm-no').textContent=p?'放弃 ☠️':'☠️ 确认';
+    m.classList.remove('hidden');
+    document.getElementById('dm-yes').onclick=()=>{
+      m.classList.add('hidden');
+      removeCard(p,G.pl.hand);G.pl.hp=1;
+      addLog('🍑 你用桃自救！恢复到1点体力');
+      flashChar('pl','heal');renderAll();resolve();
+    };
+    document.getElementById('dm-no').onclick=()=>{m.classList.add('hidden');gameOver(false);resolve();};
+  });
+}
+
+function isOver(){return G.pl.hp<=0||G.ai.hp<=0;}
+
+// ═══════════════════════════════════════════════════════════════
+//  INTERACTION — PLAYER TURN
+// ═══════════════════════════════════════════════════════════════
+async function onCardClick(card){
+  const def=CDEFS[card.type];
+
+  // ── Response phase (dodge / naman reply) ──────────────────
+  if(G.phase==='AWAIT_RESPONSE'&&G.pendingResp){
+    const pr=G.pendingResp;
+    if(!pr.validTypes.includes(card.type)){
+      flashMsg(`请出 ${pr.validTypes.map(t=>CDEFS[t].name).join('/')}！`);
+      return;
+    }
+    removeCard(card,G.pl.hand);
+    addLog(`🛡️ 你出了【${def.name}】成功应对！`);
+    showPlayedCard(card,'player');
+    showBtn('take-hit-btn',false);
+    const resolve=pr.resolve; G.pendingResp=null;
+    G.phase='AI_TURN';
+    renderAll();
+    await sleep(500);
+    resolve('blocked');
+    return;
+  }
+
+  if(G.phase!=='PLAYER_PLAY') return;
+
+  // ── Normal play ────────────────────────────────────────────
+  if(def.equip){
+    // Equip card
+    removeCard(card,G.pl.hand);
+    equipCard(card,G.pl);
+    addLog(`⚙️ 你装备了【${def.name}】！${def.desc}`);
+    flashChar('pl','gold');
+    showPlayedCard(card,'player');
+    renderAll();
+    return;
+  }
+
+  switch(card.type){
+    case 'SHA': {
+      const crossbow = G.pl.equip.weapon?.type==='CROSSBOW';
+      if(!crossbow && G.pl.slashUsed>=1){flashMsg('每回合只能出1张杀！（连弩可无限）');return;}
+      removeCard(card,G.pl.hand);
+      G.pl.slashUsed++;
+      addLog('⚔️ 你出了【杀】，对AI发动攻击！');
+      showPlayedCard(card,'player');
+      renderAll();
+      const prev=G.phase; G.phase='AI_TURN';
+      showBtn('end-turn-btn',false);
+      await sleep(800);
+      const dodged=await resolvePlayerAttack(1, card);
+      if(isOver()) return;
+      // BLADE follow-up
+      if(dodged && G.pl.equip.weapon?.type==='BLADE'){
+        const nextSha=G.pl.hand.find(c=>c.type==='SHA');
+        if(nextSha){
+          addLog('🗡️ 青龙偃月！AI出了闪，你可再出一张杀！');
+          G.phase='PLAYER_PLAY'; showBtn('end-turn-btn',true);
+          setPhase('青龙偃月效果！可再出一张【杀】');
+          renderAll();
+          return; // let player manually click the next SHA
+        }
+      }
+      G.phase='PLAYER_PLAY'; showBtn('end-turn-btn',true);
+      setPhase('你的回合 — 点击手牌出牌，或结束回合');
+      renderAll();
+      break;
+    }
+    case 'SHAN':  flashMsg('进攻时才能出闪！'); break;
+    case 'TAO':
+      if(G.pl.hp>=G.pl.char.maxHp){flashMsg('体力已满！');return;}
+      removeCard(card,G.pl.hand);
+      G.pl.hp=Math.min(G.pl.char.maxHp,G.pl.hp+1);
+      addLog(`🍑 你用了【桃】，恢复1点体力 → ${G.pl.hp}`);
+      flashChar('pl','heal');showPlayedCard(card,'player');renderAll();
+      break;
+    case 'FIRE':
+      removeCard(card,G.pl.hand);
+      addLog('🔥 火攻！对AI造成2点伤害（无法抵挡）');
+      showPlayedCard(card,'player');renderAll();
+      G.phase='AI_TURN';showBtn('end-turn-btn',false);
+      await sleep(800);await dealDmgToAI(2);
+      if(isOver()) return;
+      G.phase='PLAYER_PLAY';showBtn('end-turn-btn',true);
+      setPhase('你的回合 — 点击手牌出牌，或结束回合');renderAll();
+      break;
+    case 'DRAW':
+      removeCard(card,G.pl.hand);
+      drawCard(G.pl.hand);drawCard(G.pl.hand);
+      addLog('✨ 无中生有！你摸了2张牌');
+      showPlayedCard(card,'player');renderAll();
+      break;
+    case 'NAMAN':
+      removeCard(card,G.pl.hand);
+      addLog('🏹 南蛮入侵！AI须出一张【杀】否则受1点伤害');
+      showPlayedCard(card,'player');renderAll();
+      G.phase='AI_TURN';showBtn('end-turn-btn',false);
+      await sleep(800);await resolveNamanOnAI();
+      if(isOver()) return;
+      G.phase='PLAYER_PLAY';showBtn('end-turn-btn',true);
+      setPhase('你的回合 — 点击手牌出牌，或结束回合');renderAll();
+      break;
+  }
+}
+
+// Player attacked AI → AI auto-responds (returns true if AI dodged)
+async function resolvePlayerAttack(damage, attackCard){
+  await sleep(600);
+  const shan=G.ai.hand.find(c=>c.type==='SHAN');
+  // AI dodges smartly: dodge if hp>1 or 50/50, 70% chance
+  if(shan && (G.ai.hp>1||Math.random()<.5) && Math.random()<.72){
+    removeCard(shan,G.ai.hand);
+    addLog('🛡️ AI出了【闪】，躲过攻击！');
+    showPlayedCard(shan,'ai');renderAll();
+    await sleep(700);
+    return true; // dodged
+  }
+  await dealDmgToAI(damage);
+  return false; // hit
+}
+
+async function resolveNamanOnAI(){
+  await sleep(700);
+  const sha=G.ai.hand.find(c=>c.type==='SHA');
+  if(sha){
+    removeCard(sha,G.ai.hand);
+    addLog('⚔️ AI出了【杀】，抵挡南蛮入侵！');
+    showPlayedCard(sha,'ai');renderAll();await sleep(700);
+  } else {
+    addLog('❌ AI无杀可出，受1点伤害！');
+    await dealDmgToAI(1);
+  }
+}
+
+// ─── AI attacked player → await player dodge ────────────────────
+function awaitPlayerDodge(damage){
+  return new Promise(async resolve=>{
+    // BAGUA armor check
+    if(G.pl.equip.armor?.type==='BAGUA'){
+      addLog('☯️ 八卦阵发动！');
+      await sleep(400);
+      const red=await baguaFlip();
+      if(red){
+        addLog('☯️ 翻到红牌！八卦阵自动格挡！');
+        flashChar('pl','shield');
+        await sleep(500);
+        resolve('blocked');
+        return;
+      }
+      addLog('☯️ 翻到黑牌，格挡失败...');
+    }
+    // Check 仁王盾: handled in dealDmgToPlayer
+    // Let player choose
+    G.phase='AWAIT_RESPONSE';
+    G.pendingResp={resolve,validTypes:['SHAN'],damage};
+    const shanCount=G.pl.hand.filter(c=>c.type==='SHAN').length;
+    showBtn('take-hit-btn',true);
+    setPhase(`⚠️ AI出了【杀】！${shanCount>0?`点亮的【闪】可格挡 (${shanCount}张)`:'你没有闪！'}或点【受伤】`);
+    renderPlayerHand();
+  });
+}
+
+function awaitPlayerShaForNaman(){
+  return new Promise(resolve=>{
+    G.phase='AWAIT_RESPONSE';
+    G.pendingResp={resolve,validTypes:['SHA'],damage:1};
+    const n=G.pl.hand.filter(c=>c.type==='SHA').length;
+    showBtn('take-hit-btn',true);
+    setPhase(`⚠️ 南蛮入侵！${n>0?`出一张【杀】可抵挡 (${n}张)`:'你没有杀！'}或点【受伤】`);
+    renderPlayerHand();
+  });
+}
+
+window.takeHit=function(){
+  if(G.phase!=='AWAIT_RESPONSE'||!G.pendingResp) return;
+  showBtn('take-hit-btn',false);
+  const{damage,resolve}=G.pendingResp; G.pendingResp=null;
+  G.phase='AI_TURN';
+  addLog('💥 你选择受伤...');
+  dealDmgToPlayer(damage,true).then(()=>{if(!isOver()){renderAll();resolve('hit');}});
+};
+
+function endTurn(){
+  if(G.phase!=='PLAYER_PLAY') return;
+  const LIMIT=4;
+  if(G.pl.hand.length>LIMIT){
+    const prio={SHA:6,SHAN:5,TAO:4,FIRE:5,DRAW:3,NAMAN:3,CROSSBOW:4,BLADE:5,BAGUA:4,SHIELD:4};
+    G.pl.hand.sort((a,b)=>prio[b.type]-prio[a.type]);
+    while(G.pl.hand.length>LIMIT){
+      const c=G.pl.hand.pop(); G.discard.push(c);
+      addLog(`🗑️ 弃牌：【${CDEFS[c.type].name}】`);
+    }
+    renderAll();
+  }
+  showBtn('end-turn-btn',false);
+  G.pl.slashUsed=0;
+  G.phase='AI_TURN';
+  setTimeout(aiTurn,600);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AI TURN
+// ═══════════════════════════════════════════════════════════════
+async function aiTurn(){
+  G.phase='AI_TURN';
+  setPhase('AI 回合中...');
+  await sleep(500);
+
+  // Draw
+  const extra=G.ai.char.id===1?1:0;
+  const n=2+extra;
+  for(let i=0;i<n;i++) drawCard(G.ai.hand);
+  addLog(`🤖 AI摸了 ${n} 张牌`);
+  renderAll();
+  await sleep(700);
+
+  G.ai.slashUsed=0;
+
+  // Try to equip
+  const equipPriority=['CROSSBOW','BLADE','BAGUA','SHIELD'];
+  for(const etype of equipPriority){
+    const ec=G.ai.hand.find(c=>c.type===etype);
+    if(ec && !G.ai.equip[CDEFS[etype].slot]){
+      removeCard(ec,G.ai.hand);
+      equipCard(ec,G.ai);
+      addLog(`⚙️ AI装备了【${CDEFS[etype].name}】！`);
+      flashChar('ai','gold');
+      showPlayedCard(ec,'ai');
+      renderAll();await sleep(900);
+      break;
+    }
+  }
+
+  // Play actions
+  let acted=true;
+  while(acted){
+    acted=false;
+    if(isOver()) return;
+
+    // Heal if low
+    if(G.ai.hp<=2){
+      const t=G.ai.hand.find(c=>c.type==='TAO');
+      if(t&&G.ai.hp<G.ai.char.maxHp){
+        removeCard(t,G.ai.hand);G.ai.hp++;
+        addLog(`🍑 AI用了【桃】，恢复1点体力 → ${G.ai.hp}`);
+        flashChar('ai','heal');showPlayedCard(t,'ai');renderAll();await sleep(900);acted=true;continue;
+      }
+    }
+    // Draw extra
+    if(G.ai.hand.length<=2){
+      const t=G.ai.hand.find(c=>c.type==='DRAW');
+      if(t){
+        removeCard(t,G.ai.hand);drawCard(G.ai.hand);drawCard(G.ai.hand);
+        addLog('✨ AI用了【无中生有】，摸2张牌');
+        showPlayedCard(t,'ai');renderAll();await sleep(800);acted=true;continue;
+      }
+    }
+    // Fire
+    const fire=G.ai.hand.find(c=>c.type==='FIRE');
+    if(fire&&Math.random()<.6){
+      removeCard(fire,G.ai.hand);
+      addLog('🔥 AI出了【火攻】！对你造成2点伤害！');
+      showPlayedCard(fire,'ai');renderAll();await sleep(900);
+      await dealDmgToPlayer(2,false);
+      if(isOver()) return;
+      renderAll();acted=true;break;
+    }
+    // Naman
+    const naman=G.ai.hand.find(c=>c.type==='NAMAN');
+    if(naman&&Math.random()<.55){
+      removeCard(naman,G.ai.hand);
+      addLog('🏹 AI出了【南蛮入侵】！你须出一张【杀】！');
+      showPlayedCard(naman,'ai');renderAll();await sleep(800);
+      const res=await awaitPlayerShaForNaman();
+      showBtn('take-hit-btn',false);
+      if(isOver()) return;
+      renderAll();await sleep(400);acted=true;continue;
+    }
+    // SHA
+    const crossbow=G.ai.equip.weapon?.type==='CROSSBOW';
+    if(crossbow||G.ai.slashUsed<1){
+      const sha=G.ai.hand.find(c=>c.type==='SHA');
+      if(sha){
+        removeCard(sha,G.ai.hand);G.ai.slashUsed++;
+        addLog('⚔️ AI出了【杀】，攻击你！');
+        showPlayedCard(sha,'ai');renderAll();await sleep(900);
+        const res=await awaitPlayerDodge(1);
+        showBtn('take-hit-btn',false);
+        if(res==='hit') await dealDmgToPlayer(1,true);
+        if(isOver()) return;
+        // BLADE follow-up for AI
+        if(res==='blocked'&&G.ai.equip.weapon?.type==='BLADE'){
+          const sha2=G.ai.hand.find(c=>c.type==='SHA');
+          if(sha2&&Math.random()<.7){
+            removeCard(sha2,G.ai.hand);
+            addLog('🗡️ AI青龙偃月效果！再出一张杀！');
+            showPlayedCard(sha2,'ai');renderAll();await sleep(900);
+            const res2=await awaitPlayerDodge(1);
+            showBtn('take-hit-btn',false);
+            if(res2==='hit') await dealDmgToPlayer(1,true);
+            if(isOver()) return;
+          }
+        }
+        renderAll();await sleep(400);acted=true;break;
+      }
+    }
+    break;
+  }
+
+  // Discard excess
+  const LIMIT=4;
+  const prio={SHA:6,SHAN:5,TAO:4,FIRE:5,DRAW:3,NAMAN:3,CROSSBOW:4,BLADE:5,BAGUA:4,SHIELD:4};
+  G.ai.hand.sort((a,b)=>prio[b.type]-prio[a.type]);
+  while(G.ai.hand.length>LIMIT){
+    const c=G.ai.hand.pop();G.discard.push(c);
+    addLog('🗑️ AI弃了一张牌');await sleep(300);
+  }
+  renderAll();
+  await sleep(600);
+  G.phase='PLAYER_PLAY';
+  playerDraw();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TURN START
+// ═══════════════════════════════════════════════════════════════
+function playerDraw(){
+  const extra=G.pl.char.id===1?1:0;
+  const n=2+extra;
+  for(let i=0;i<n;i++) drawCard(G.pl.hand);
+  addLog(`📤 你摸了 ${n} 张牌`);
+  G.pl.slashUsed=0;
+  showBtn('end-turn-btn',true);
+  setPhase('你的回合 — 点击手牌出牌，或结束回合');
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  START / END GAME
+// ═══════════════════════════════════════════════════════════════
+function startGame(idx){
+  const aiIdx=idx===0?1:0;
+  G.pl.char=CHARS[idx];   G.pl.hp=CHARS[idx].maxHp;   G.pl.hand=[];G.pl.slashUsed=0;G.pl.equip={weapon:null,armor:null};
+  G.ai.char=CHARS[aiIdx]; G.ai.hp=CHARS[aiIdx].maxHp; G.ai.hand=[];G.ai.slashUsed=0;G.ai.equip={weapon:null,armor:null};
+  G.deck=makeDeck();G.discard=[];G.log=[];
+  for(let i=0;i<4;i++){drawCard(G.pl.hand);drawCard(G.ai.hand);}
+
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('board').classList.remove('hidden');
+
+  const setC=(who,c)=>{
+    document.getElementById(who+'-portrait').src=c.photo;
+    document.getElementById(who+'-cname').textContent=c.name;
+    document.getElementById(who+'-ability-tag').textContent=`【${c.ability}】${c.abilityDesc.slice(0,14)}`;
+  };
+  setC('player',G.pl.char);setC('ai',G.ai.char);
+
+  addLog('⚔️ 游戏开始！先攻：你');
+  addLog(`👤 你是【${G.pl.char.name}】VS AI【${G.ai.char.name}】`);
+  G.phase='PLAYER_PLAY';
+  playerDraw();
+}
+
+function gameOver(win){
+  G.phase='END';
+  showBtn('end-turn-btn',false);showBtn('take-hit-btn',false);
+  stopConfetti();
+  const s=document.getElementById('end-screen');
+  s.className=win?'win':'lose';
+  document.getElementById('end-emoji').textContent=win?'🎉':'💀';
+  document.getElementById('end-title').textContent=win?'胜利！':'败北...';
+  document.getElementById('end-sub').textContent=win
+    ?`你以 ${G.pl.hp} 点体力击败了 ${G.ai.char.name}！`
+    :`${G.ai.char.name} 获胜！下次一定！`;
+  s.classList.remove('hidden');
+  if(win) launchConfetti();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SETUP BUILDER
+// ═══════════════════════════════════════════════════════════════
+function buildSetup(){
+  const row=document.getElementById('char-row');
+  CHARS.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='char-pick';
+    el.innerHTML=`
+      <img src="${c.photo}" alt="${c.name}">
+      <div class="cname">${c.name}</div>
+      <div class="ctitle">${c.title}</div>
+      <div class="chp-setup">${'❤️'.repeat(c.maxHp)}</div>
+      <div class="cability">【${c.ability}】<br>${c.abilityDesc}</div>
+      <button class="pick-btn">选择 ⚔️</button>
+    `;
+    el.querySelector('.pick-btn').addEventListener('click',()=>startGame(i));
+    row.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONFETTI
+// ═══════════════════════════════════════════════════════════════
+let cfRaf=null,cfParts=[];
+const cfColors=['#FFD700','#FF6B6B','#4CAF50','#29B6F6','#FF80AB','#c9a227','#f5d060'];
+function launchConfetti(){
+  const c=document.getElementById('cfv');
+  c.width=innerWidth;c.height=innerHeight;
+  cfParts=Array.from({length:110},()=>({
+    x:Math.random()*innerWidth,y:-10,
+    vx:(Math.random()-.5)*5,vy:Math.random()*4+2,
+    size:Math.random()*8+4,color:cfColors[Math.floor(Math.random()*cfColors.length)],
+    rot:Math.random()*360,rv:(Math.random()-.5)*6,
+  }));
+  (function loop(){
+    const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+    cfParts.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.rot+=p.rv;p.vy+=.06;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/4,p.size,p.size/2);
+      ctx.restore();
+    });
+    cfParts=cfParts.filter(p=>p.y<c.height+20);
+    if(cfParts.length) cfRaf=requestAnimationFrame(loop);
+  })();
+}
+function stopConfetti(){cancelAnimationFrame(cfRaf);cfRaf=null;const c=document.getElementById('cfv');c.getContext('2d').clearRect(0,0,c.width,c.height);}
+
+// ── BOOT ──────────────────────────────────────────────────────
+buildSetup();
+</script>
+</body>
+</html>
