@@ -131,21 +131,23 @@
 <script>
 // ── Actors ───────────────────────────────────────────────────
 const ACTORS = [
-  { id:'jackie',      name:'Jackie Chan',   zh:'成龙',  isTarget:true,  wiki:'Jackie_Chan' },
-  { id:'jetli',       name:'Jet Li',        zh:'李连杰', isTarget:false, wiki:'Jet_Li' },
-  { id:'andylau',     name:'Andy Lau',      zh:'刘德华', isTarget:false, wiki:'Andy_Lau' },
-  { id:'chowyunfat',  name:'Chow Yun-fat',  zh:'周润发', isTarget:false, wiki:'Chow_Yun-fat' },
-  { id:'stephenchow', name:'Stephen Chow',  zh:'周星驰', isTarget:false, wiki:'Stephen_Chow' },
-  { id:'donniyen',    name:'Donnie Yen',    zh:'甄子丹', isTarget:false, wiki:'Donnie_Yen' },
-  { id:'tonyleung',   name:'Tony Leung',    zh:'梁朝伟', isTarget:false, wiki:'Tony_Leung_Chiu-wai' },
-  { id:'brucelee',    name:'Bruce Lee',     zh:'李小龙', isTarget:false, wiki:'Bruce_Lee' },
+  { id:'jackie',      name:'Jackie Chan',   zh:'成龙',  isTarget:true,  wiki:'Jackie_Chan',        photoCount:3 },
+  { id:'jetli',       name:'Jet Li',        zh:'李连杰', isTarget:false, wiki:'Jet_Li',              photoCount:3 },
+  { id:'andylau',     name:'Andy Lau',      zh:'刘德华', isTarget:false, wiki:'Andy_Lau',            photoCount:3 },
+  { id:'chowyunfat',  name:'Chow Yun-fat',  zh:'周润发', isTarget:false, wiki:'Chow_Yun-fat',        photoCount:2 },
+  { id:'stephenchow', name:'Stephen Chow',  zh:'周星驰', isTarget:false, wiki:'Stephen_Chow',        photoCount:3 },
+  { id:'donniyen',    name:'Donnie Yen',    zh:'甄子丹', isTarget:false, wiki:'Donnie_Yen',          photoCount:3 },
+  { id:'tonyleung',   name:'Tony Leung',    zh:'梁朝伟', isTarget:false, wiki:'Tony_Leung_Chiu-wai', photoCount:2 },
+  { id:'brucelee',    name:'Bruce Lee',     zh:'李小龙', isTarget:false, wiki:'Bruce_Lee',           photoCount:2 },
 ];
 
 // ── Photo loading ────────────────────────────────────────────
 // Sources tried in order:
-//   1. images/actors/{id}.jpg — committed to the repo and served by GitHub
-//      Pages, so it works in regions that block Wikipedia.
-//   2. Wikipedia REST API thumbnail — only when no local file is present.
+//   1. A randomly-picked images/actors/{id}-{n}.jpg — several photos per
+//      actor are committed to the repo and served by GitHub Pages, so it
+//      works in regions that block Wikipedia, and the grid looks different
+//      each round.
+//   2. Wikipedia REST API thumbnail — only when no local file loads.
 //
 // Handlers are attached BEFORE .src is set: a cached image can finish
 // loading before the next statement runs, and a load event missed that way
@@ -179,7 +181,8 @@ function loadPhoto(img, actor){
     img.onerror = showMissing;
     img.src = url;
   };
-  img.src = 'images/actors/' + actor.id + '.jpg';
+  const pick = 1 + Math.floor(Math.random() * actor.photoCount);
+  img.src = 'images/actors/' + actor.id + '-' + pick + '.jpg';
 }
 
 // ── Clues ─────────────────────────────────────────────────────
