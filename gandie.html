@@ -61,6 +61,21 @@ body{
 .padbtn:active{background:#2b3446;transform:scale(.93);}
 .padbtn.fn{background:transparent;border-color:transparent;color:#8da0b8;font-size:1.15rem;}
 
+.hintbox{
+  display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:6px;
+}
+.hintbox .lbl{
+  font-size:.62rem;color:#5d6b7f;letter-spacing:2.5px;text-transform:uppercase;
+}
+.hintbox .flash{
+  font-size:1.9rem;line-height:1;
+  animation:beam 2.6s ease-in-out infinite;
+}
+@keyframes beam{
+  0%,100%{filter:drop-shadow(0 0 6px rgba(253,224,71,.3));  transform:rotate(-9deg);}
+  50%    {filter:drop-shadow(0 0 20px rgba(253,224,71,.85)); transform:rotate(5deg);}
+}
+
 /* ── Header ── */
 .hdr{
   display:flex;align-items:center;gap:12px;
@@ -194,6 +209,10 @@ body{
     <div class="pin" id="pin"><i></i><i></i><i></i><i></i></div>
     <div class="err" id="err"></div>
     <div class="pad" id="pad"></div>
+    <div class="hintbox">
+      <div class="lbl">提示 · hint</div>
+      <div class="flash">🔦</div>
+    </div>
   </div>
 
   <div class="hdr">
