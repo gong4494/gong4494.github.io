@@ -19,12 +19,47 @@ body{
 }
 
 .phone{
+  position:relative;
   width:100%;max-width:470px;height:min(94vh,860px);
   background:#11141c;border:1px solid rgba(255,255,255,.09);
   border-radius:22px;overflow:hidden;
   display:flex;flex-direction:column;
   box-shadow:0 30px 70px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.03) inset;
 }
+
+/* ── Lock screen ── */
+.lock{
+  position:absolute;inset:0;z-index:30;background:#0e121a;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:26px;
+  transition:opacity .4s ease, visibility .4s;
+}
+.lock.open{opacity:0;visibility:hidden;pointer-events:none;}
+.lock-ico{font-size:2.5rem;line-height:1;}
+.lock h2{font-size:1.06rem;font-weight:700;letter-spacing:.4px;}
+.lock .sub2{font-size:.78rem;color:#7c8ba1;text-align:center;line-height:1.6;}
+.pin{display:flex;gap:15px;margin:2px 0;}
+.pin i{
+  width:13px;height:13px;border-radius:50%;display:block;
+  border:2px solid #475569;transition:background .15s,border-color .15s,box-shadow .15s;
+}
+.pin i.on{background:#22d3ee;border-color:#22d3ee;box-shadow:0 0 11px rgba(34,211,238,.65);}
+.lock.bad .pin{animation:shk .42s;}
+.lock.bad .pin i{border-color:#f87171;background:transparent;box-shadow:none;}
+@keyframes shk{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-11px);}40%{transform:translateX(9px);}
+  60%{transform:translateX(-6px);}80%{transform:translateX(4px);}
+}
+.err{font-size:.76rem;color:#f87171;min-height:17px;}
+.pad{display:grid;grid-template-columns:repeat(3,68px);gap:11px;}
+.key{
+  height:60px;border-radius:50%;cursor:pointer;font-family:inherit;
+  border:1px solid rgba(255,255,255,.1);background:#1b2130;color:#e8edf5;
+  font-size:1.35rem;font-weight:500;transition:transform .08s,background .12s;
+}
+.key:active{background:#2b3446;transform:scale(.93);}
+.key.fn{background:transparent;border-color:transparent;color:#8da0b8;font-size:1.15rem;}
 
 /* ── Header ── */
 .hdr{
@@ -148,6 +183,16 @@ body{
 <body>
 
 <div class="phone">
+
+  <div class="lock" id="lock">
+    <div class="lock-ico">🔒</div>
+    <h2>Gandie</h2>
+    <div class="sub2">输入四位密码<br>Enter 4-digit code</div>
+    <div class="pin" id="pin"><i></i><i></i><i></i><i></i></div>
+    <div class="err" id="err"></div>
+    <div class="pad" id="pad"></div>
+  </div>
+
   <div class="hdr">
     <div class="ava photo"></div>
     <div class="hinfo">
@@ -221,6 +266,66 @@ const REPLIES = [
   '你在拖时间吗？',
   '门不会自己开。',
 ];
+
+// ── Lock ─────────────────────────────────────────────────────
+// Base64 only, same as the passphrase: it defeats a casual View Source,
+// not devtools. A 4-digit code is brute-forceable client-side regardless.
+const PIN_B = 'NDQ1OQ==';
+let buf = '', locked = true;
+
+const pinEl = document.getElementById('pin');
+const errEl = document.getElementById('err');
+const lockEl = document.getElementById('lock');
+
+(function buildPad(){
+  const pad = document.getElementById('pad');
+  ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
+    if (k === '') { pad.appendChild(document.createElement('span')); return; }
+    const b = document.createElement('button');
+    b.className = 'key' + (k === '⌫' ? ' fn' : '');
+    b.textContent = k;
+    b.onclick = () => (k === '⌫' ? back() : press(k));
+    pad.appendChild(b);
+  });
+})();
+
+function drawPin(){
+  [...pinEl.children].forEach((d, i) => d.classList.toggle('on', i < buf.length));
+}
+function press(d){
+  if (!locked || buf.length >= 4) return;
+  lockEl.classList.remove('bad');
+  errEl.textContent = '';
+  buf += d; drawPin();
+  if (buf.length === 4) setTimeout(check, 180);
+}
+function back(){
+  if (!locked) return;
+  buf = buf.slice(0, -1); drawPin(); errEl.textContent = '';
+}
+function check(){
+  if (buf === dec(PIN_B)) return unlock();
+  lockEl.classList.add('bad');
+  errEl.textContent = '密码错误 · wrong code';
+  buf = '';
+  setTimeout(() => { lockEl.classList.remove('bad'); drawPin(); }, 430);
+}
+function unlock(){
+  locked = false;
+  lockEl.classList.add('open');
+  setTimeout(() => inp.focus(), 420);
+}
+function relock(){
+  locked = true; buf = ''; drawPin();
+  errEl.textContent = '';
+  lockEl.classList.remove('open', 'bad');
+}
+
+document.addEventListener('keydown', e => {
+  if (!locked) return;
+  if (/^[0-9]$/.test(e.key)) { press(e.key); e.preventDefault(); }
+  else if (e.key === 'Backspace') { back(); e.preventDefault(); }
+});
 
 // ── Chat ─────────────────────────────────────────────────────
 const msgs = document.getElementById('msgs');
@@ -320,7 +425,8 @@ function resetChat(){
   msgs.innerHTML = '';
   busy = false; btn.disabled = false; lastReply = -1;
   addMsg('谁？', 'g');
-  inp.value = ''; inp.focus();
+  inp.value = '';
+  relock();
 }
 
 resetChat();
