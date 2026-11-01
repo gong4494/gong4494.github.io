@@ -99,7 +99,7 @@ body{
   0%,100%{box-shadow:0 0 20px rgba(245,158,11,.45);}
   50%    {box-shadow:0 0 38px rgba(245,158,11,.85);}
 }
-.row.key .mava{background:linear-gradient(145deg,#b45309,#78350f);border-color:rgba(252,211,77,.6);color:#fff7ed;}
+.row.key .mava{border-color:#fcd34d;box-shadow:0 0 12px rgba(245,158,11,.75);}
 
 .time{font-size:.63rem;color:#64748b;margin-top:4px;padding:0 4px;}
 
@@ -133,13 +133,23 @@ body{
 }
 #send:active{transform:scale(.9);}
 #send:disabled{opacity:.4;cursor:not-allowed;}
+
+/* Gandie's face. Specificity must beat `.ava` and `.row .mava`, both of which
+   set a `background` shorthand that would otherwise wipe the image. */
+.ava.photo, .row .mava.photo{
+  background-image:url('images/gandie.jpg');
+  background-size:cover;
+  background-position:center 42%;
+  background-repeat:no-repeat;
+  color:transparent;font-size:0;
+}
 </style>
 </head>
 <body>
 
 <div class="phone">
   <div class="hdr">
-    <div class="ava">G</div>
+    <div class="ava photo"></div>
     <div class="hinfo">
       <div class="nm">Gandie</div>
       <div class="status" id="status">在线 · online</div>
@@ -228,8 +238,8 @@ function addMsg(text, who, key){
   const row = document.createElement('div');
   row.className = 'row' + (who === 'me' ? ' me' : '') + (key ? ' key' : '');
   const av = document.createElement('div');
-  av.className = 'mava';
-  av.textContent = who === 'me' ? '你' : 'G';
+  av.className = 'mava' + (who === 'me' ? '' : ' photo');
+  if (who === 'me') av.textContent = '你';
   const wrap = document.createElement('div');
   wrap.className = 'wrap';
   const bub = document.createElement('div');
@@ -247,7 +257,7 @@ function addMsg(text, who, key){
 function showTyping(){
   const row = document.createElement('div');
   row.className = 'row'; row.id = 'typing';
-  row.innerHTML = '<div class="mava">G</div><div class="bub" style="padding:0"><div class="dots"><i></i><i></i><i></i></div></div>';
+  row.innerHTML = '<div class="mava photo"></div><div class="bub" style="padding:0"><div class="dots"><i></i><i></i><i></i></div></div>';
   msgs.appendChild(row);
   msgs.scrollTop = msgs.scrollHeight;
   document.getElementById('status').textContent = '正在输入…';
