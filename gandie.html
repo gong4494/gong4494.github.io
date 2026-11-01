@@ -53,13 +53,13 @@ body{
 }
 .err{font-size:.76rem;color:#f87171;min-height:17px;}
 .pad{display:grid;grid-template-columns:repeat(3,68px);gap:11px;}
-.key{
+.padbtn{
   height:60px;border-radius:50%;cursor:pointer;font-family:inherit;
   border:1px solid rgba(255,255,255,.1);background:#1b2130;color:#e8edf5;
   font-size:1.35rem;font-weight:500;transition:transform .08s,background .12s;
 }
-.key:active{background:#2b3446;transform:scale(.93);}
-.key.fn{background:transparent;border-color:transparent;color:#8da0b8;font-size:1.15rem;}
+.padbtn:active{background:#2b3446;transform:scale(.93);}
+.padbtn.fn{background:transparent;border-color:transparent;color:#8da0b8;font-size:1.15rem;}
 
 /* ── Header ── */
 .hdr{
@@ -99,7 +99,10 @@ body{
 .msgs::-webkit-scrollbar{width:5px;}
 .msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px;}
 
-.row{display:flex;gap:9px;align-items:flex-end;animation:rise .26s ease-out;}
+.row{display:flex;gap:9px;align-items:flex-end;animation:rise .26s ease-out;
+  flex:0 0 auto;  /* flex items default to shrinking; without this a tall
+                     message is squashed and overlaps the one above it */
+}
 @keyframes rise{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:none;}}
 .row.me{flex-direction:row-reverse;}
 .row .mava{
@@ -220,7 +223,7 @@ const B = [
   '5aSp546L6JOL5Zyw6JmO',   // trigger, traditional
   'dGlhbndhbmdnYWlkaWh1',   // trigger, pinyin (no IME needed)
 ];
-const A = '5a6d5aGU6ZWH5rKz5aaWcG9ydGFsIGlzIGxhdW5kcnkgbWFjaGluZSBhbmQgZHJ5ZXI=';
+const A = '5a6d5aGU6ZWH5rKz5aaWClB1dCB0aGUgbGFzZXIgZ3VuIGluIHRoZSB0cmVhc3VyZSBib3ggaW4gdGhlIGJhc2VtZW50LCB0aGVuIGdvIGludG8gdGhlIGxhdW5kcnkgbWFjaGluZSBhbmQgZHJ5ZXIgdG8gc3RhcnQgdGhlIHBvcnRhbC4=';
 
 const dec = s => new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)));
 
@@ -282,7 +285,7 @@ const lockEl = document.getElementById('lock');
   ['1','2','3','4','5','6','7','8','9','','0','⌫'].forEach(k => {
     if (k === '') { pad.appendChild(document.createElement('span')); return; }
     const b = document.createElement('button');
-    b.className = 'key' + (k === '⌫' ? ' fn' : '');
+    b.className = 'padbtn' + (k === '⌫' ? ' fn' : '');
     b.textContent = k;
     b.onclick = () => (k === '⌫' ? back() : press(k));
     pad.appendChild(b);
