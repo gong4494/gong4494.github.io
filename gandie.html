@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Gandie</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#07080c;
+  background-image:
+    radial-gradient(900px 500px at 50% -10%, rgba(56,189,248,.10), transparent 60%),
+    radial-gradient(700px 500px at 50% 110%, rgba(245,158,11,.07), transparent 60%);
+  display:flex;align-items:center;justify-content:center;
+  padding:14px;color:#e8edf5;
+}
+
+.phone{
+  width:100%;max-width:470px;height:min(94vh,860px);
+  background:#11141c;border:1px solid rgba(255,255,255,.09);
+  border-radius:22px;overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 30px 70px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.03) inset;
+}
+
+/* ── Header ── */
+.hdr{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;background:#161b26;
+  border-bottom:1px solid rgba(255,255,255,.07);flex:0 0 auto;
+}
+.ava{
+  width:42px;height:42px;border-radius:50%;flex:0 0 auto;
+  background:linear-gradient(145deg,#334155,#1e293b);
+  border:1px solid rgba(148,163,184,.35);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15rem;font-weight:700;color:#cbd5e1;
+  letter-spacing:.5px;position:relative;
+}
+.ava::after{
+  content:'';position:absolute;right:1px;bottom:1px;
+  width:11px;height:11px;border-radius:50%;
+  background:#22c55e;border:2px solid #161b26;
+}
+.hinfo{flex:1;min-width:0;}
+.nm{font-weight:700;font-size:1.02rem;letter-spacing:.2px;}
+.status{font-size:.72rem;color:#8da0b8;margin-top:1px;}
+.reset{
+  background:none;border:1px solid rgba(255,255,255,.12);color:#7c8ba1;
+  border-radius:8px;padding:5px 9px;font-size:.7rem;cursor:pointer;
+  font-family:inherit;
+}
+.reset:active{background:rgba(255,255,255,.07);}
+
+/* ── Messages ── */
+.msgs{
+  flex:1;overflow-y:auto;padding:18px 14px 10px;
+  display:flex;flex-direction:column;gap:12px;
+  scroll-behavior:smooth;
+}
+.msgs::-webkit-scrollbar{width:5px;}
+.msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px;}
+
+.row{display:flex;gap:9px;align-items:flex-end;animation:rise .26s ease-out;}
+@keyframes rise{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:none;}}
+.row.me{flex-direction:row-reverse;}
+.row .mava{
+  width:29px;height:29px;border-radius:50%;flex:0 0 auto;
+  background:linear-gradient(145deg,#334155,#1e293b);
+  border:1px solid rgba(148,163,184,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.76rem;font-weight:700;color:#cbd5e1;
+}
+.row.me .mava{background:linear-gradient(145deg,#0e7490,#155e75);border-color:rgba(34,211,238,.3);color:#cffafe;}
+
+.wrap{
+  max-width:78%;min-width:0;display:flex;flex-direction:column;
+}
+.row.me .wrap{align-items:flex-end;}
+.bub{
+  max-width:100%;width:fit-content;padding:10px 14px;border-radius:17px;
+  font-size:.93rem;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap;
+}
+.row:not(.me) .bub{background:#232b39;border-bottom-left-radius:5px;}
+.row.me .bub{background:#0d7a86;border-bottom-right-radius:5px;color:#f0fdff;}
+
+/* the answer */
+.row.key .bub{
+  background:linear-gradient(135deg,#d97706,#f59e0b);
+  border:1px solid #fcd34d;
+  color:#1c1206;font-weight:700;
+  box-shadow:0 0 24px rgba(245,158,11,.55);
+  animation:glow 1.9s ease-in-out infinite;
+}
+@keyframes glow{
+  0%,100%{box-shadow:0 0 20px rgba(245,158,11,.45);}
+  50%    {box-shadow:0 0 38px rgba(245,158,11,.85);}
+}
+.row.key .mava{background:linear-gradient(145deg,#b45309,#78350f);border-color:rgba(252,211,77,.6);color:#fff7ed;}
+
+.time{font-size:.63rem;color:#64748b;margin-top:4px;padding:0 4px;}
+
+/* typing */
+.dots{display:flex;gap:4px;padding:13px 16px;}
+.dots i{
+  width:7px;height:7px;border-radius:50%;background:#7c8ba1;display:block;
+  animation:bounce 1.25s infinite;
+}
+.dots i:nth-child(2){animation-delay:.16s;}
+.dots i:nth-child(3){animation-delay:.32s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.45;}30%{transform:translateY(-6px);opacity:1;}}
+
+/* ── Input ── */
+.bar{
+  display:flex;gap:9px;padding:12px;background:#161b26;
+  border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto;
+}
+#inp{
+  flex:1;min-width:0;background:#222a37;border:1px solid rgba(255,255,255,.09);
+  border-radius:22px;padding:11px 16px;color:#e8edf5;
+  font-family:inherit;font-size:.94rem;outline:none;
+}
+#inp:focus{border-color:rgba(56,189,248,.45);}
+#inp::placeholder{color:#64748b;}
+#send{
+  width:44px;height:44px;flex:0 0 auto;border:none;border-radius:50%;
+  background:#0d7a86;color:#fff;font-size:1.05rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .1s,opacity .15s;
+}
+#send:active{transform:scale(.9);}
+#send:disabled{opacity:.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="hdr">
+    <div class="ava">G</div>
+    <div class="hinfo">
+      <div class="nm">Gandie</div>
+      <div class="status" id="status">在线 · online</div>
+    </div>
+    <button class="reset" onclick="resetChat()">重置</button>
+  </div>
+
+  <div class="msgs" id="msgs"></div>
+
+  <div class="bar">
+    <input id="inp" type="text" placeholder="输入消息…" autocomplete="off"
+           autocorrect="off" autocapitalize="off" spellcheck="false"/>
+    <button id="send" title="发送">➤</button>
+  </div>
+</div>
+
+<script>
+// ── Secret ───────────────────────────────────────────────────
+// Stored base64 so "view source" doesn't hand the answer straight over.
+// To change it:  btoa(unescape(encodeURIComponent('你的文字')))
+const B = [
+  '5aSp546L55uW5Zyw6JmO',   // trigger, simplified
+  '5aSp546L6JOL5Zyw6JmO',   // trigger, traditional
+  'dGlhbndhbmdnYWlkaWh1',   // trigger, pinyin (no IME needed)
+];
+const A = '5a6d5aGU6ZWH5rKz5aaWcG9ydGFsIGlzIGxhdW5kcnkgbWFjaGluZSBhbmQgZHJ5ZXI=';
+
+const dec = s => new TextDecoder().decode(Uint8Array.from(atob(s), c => c.charCodeAt(0)));
+
+// Strip spaces, punctuation and case so near-misses still count — a stray
+// space or full-width comma shouldn't stall a team in a locked room.
+function norm(s){
+  return s.toLowerCase()
+          .replace(/[\s　]+/g, '')
+          .replace(/[，。！？、,.!?;:；：'"“”‘’`~～\-_()（）]/g, '');
+}
+
+const TRIGGERS = B.map(b => norm(dec(b)));
+function isKey(text){
+  const n = norm(text);
+  return TRIGGERS.some(t => n.includes(t));
+}
+
+// ── Random replies ───────────────────────────────────────────
+const REPLIES = [
+  '……我听不懂你在说什么。',
+  '暗号不对。',
+  '你不是自己人。',
+  '我在等一句话。不是这句。',
+  '再想想。山里的老规矩，你忘了？',
+  '嗯……然后呢？',
+  '有意思，但不对。',
+  '说点我能听懂的。',
+  '这不是我要听的那句话。',
+  '天黑了，路滑。',
+  '风紧。',
+  '我只回答对得上暗号的人。',
+  '你确定你记得那句话？',
+  '不对。再试一次。',
+  '差得远了。',
+  '靠近了一点……还是不对。',
+  '谁让你来的？',
+  '我等了很久了。',
+  '上半句。我要听上半句。',
+  '说错了，我就当没听见。',
+  'That is not the phrase.',
+  'Say the words. The right ones.',
+  '……',
+  '你在拖时间吗？',
+  '门不会自己开。',
+];
+
+// ── Chat ─────────────────────────────────────────────────────
+const msgs = document.getElementById('msgs');
+const inp  = document.getElementById('inp');
+const btn  = document.getElementById('send');
+let busy = false;
+let lastReply = -1;
+
+function now(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function addMsg(text, who, key){
+  const row = document.createElement('div');
+  row.className = 'row' + (who === 'me' ? ' me' : '') + (key ? ' key' : '');
+  const av = document.createElement('div');
+  av.className = 'mava';
+  av.textContent = who === 'me' ? '你' : 'G';
+  const wrap = document.createElement('div');
+  wrap.className = 'wrap';
+  const bub = document.createElement('div');
+  bub.className = 'bub';
+  bub.textContent = text;
+  const t = document.createElement('div');
+  t.className = 'time';
+  t.textContent = now();
+  wrap.appendChild(bub); wrap.appendChild(t);
+  row.appendChild(av); row.appendChild(wrap);
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping(){
+  const row = document.createElement('div');
+  row.className = 'row'; row.id = 'typing';
+  row.innerHTML = '<div class="mava">G</div><div class="bub" style="padding:0"><div class="dots"><i></i><i></i><i></i></div></div>';
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('status').textContent = '正在输入…';
+}
+function hideTyping(){
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+  document.getElementById('status').textContent = '在线 · online';
+}
+
+function randomReply(){
+  let i;
+  do { i = Math.floor(Math.random() * REPLIES.length); }
+  while (REPLIES.length > 1 && i === lastReply);
+  lastReply = i;
+  return REPLIES[i];
+}
+
+function chime(){
+  try{
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = 'triangle'; o.frequency.value = f;
+      const t = ac.currentTime + i * 0.1;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.16, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+      o.start(t); o.stop(t + 0.45);
+    });
+  }catch(e){}
+}
+
+function send(){
+  const text = inp.value.trim();
+  if (!text || busy) return;
+  addMsg(text, 'me');
+  inp.value = '';
+  busy = true; btn.disabled = true;
+
+  const key   = isKey(text);
+  const reply = key ? dec(A) : randomReply();
+  const delay = key ? 1100 : 600 + Math.random() * 800;
+
+  showTyping();
+  setTimeout(() => {
+    hideTyping();
+    addMsg(reply, 'g', key);
+    if (key) chime();
+    busy = false; btn.disabled = false;
+    inp.focus();
+  }, delay);
+}
+
+btn.addEventListener('click', send);
+inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+
+function resetChat(){
+  msgs.innerHTML = '';
+  busy = false; btn.disabled = false; lastReply = -1;
+  addMsg('谁？', 'g');
+  inp.value = ''; inp.focus();
+}
+
+resetChat();
+</script>
+</body>
+</html>
