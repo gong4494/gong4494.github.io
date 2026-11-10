@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🍎 贪吃的苹果蛇 Apple Snake</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:'Nunito',sans-serif;
+  background:linear-gradient(170deg,#5aa9e6 0%,#7fc8f0 45%,#3f7d3f 100%);
+  min-height:100vh;color:#fff;overflow-x:hidden;
+  display:flex;flex-direction:column;align-items:center;
+  padding:8px 10px 14px;
+}
+
+.hud{
+  display:flex;gap:10px;align-items:center;justify-content:center;
+  flex-wrap:wrap;margin-bottom:8px;
+}
+.pill{
+  background:rgba(60,30,10,.55);border:2px solid rgba(255,220,150,.35);
+  border-radius:30px;padding:5px 15px;text-align:center;line-height:1.15;
+}
+.pill .k{font-size:.6rem;color:#ffd79a;text-transform:uppercase;letter-spacing:1px;}
+.pill .v{font-size:1.05rem;font-weight:900;}
+
+canvas{
+  display:block;width:min(96vw,540px);height:auto;
+  border-radius:16px;box-shadow:0 10px 34px rgba(0,0,0,.45);
+  touch-action:none;
+}
+
+.pad{
+  margin-top:12px;display:grid;
+  grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,52px);
+  gap:7px;justify-content:center;
+}
+.dbtn{
+  border:none;border-radius:13px;cursor:pointer;font-size:1.3rem;
+  background:rgba(60,30,10,.6);color:#ffe3b0;
+  border:2px solid rgba(255,220,150,.3);
+  font-family:inherit;transition:transform .07s,background .12s;
+}
+.dbtn:active{transform:scale(.92);background:rgba(120,70,20,.8);}
+#bU{grid-column:2;grid-row:1;}
+#bL{grid-column:1;grid-row:2;}
+#bD{grid-column:2;grid-row:2;}
+#bR{grid-column:3;grid-row:2;}
+
+.tip{margin-top:9px;font-size:.73rem;color:rgba(255,255,255,.8);text-align:center;}
+
+.ov{
+  display:none;position:fixed;inset:0;z-index:50;
+  background:rgba(10,30,15,.82);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:18px;
+}
+.ov.on{display:flex;}
+.card{
+  background:linear-gradient(160deg,#7b4a22,#4a2a12);
+  border:3px solid rgba(255,214,150,.5);border-radius:22px;
+  padding:24px 22px;max-width:360px;width:100%;text-align:center;
+  animation:pop .32s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.card .big{font-size:3rem;line-height:1;}
+.card h2{font-size:1.35rem;font-weight:900;color:#ffd77a;margin:9px 0;}
+.card p{font-size:.93rem;line-height:1.6;color:#f3e2cc;margin-bottom:16px;}
+.btn{
+  font-family:inherit;font-weight:900;border:none;border-radius:40px;
+  padding:11px 26px;font-size:1rem;color:#fff;cursor:pointer;margin:4px;
+  background:#4caf50;box-shadow:0 5px 0 #2e7d32;transition:transform .09s,box-shadow .09s;
+}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #2e7d32;}
+.btn.amber{background:#ef9a0b;box-shadow:0 5px 0 #a86b00;}
+.btn.amber:active{box-shadow:0 1px 0 #a86b00;}
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="pill"><div class="k">关卡 Level</div><div class="v" id="hLv">1</div></div>
+  <div class="pill"><div class="k">苹果 Apples</div><div class="v" id="hAp">0 / 0</div></div>
+  <div class="pill"><div class="k">得分 Score</div><div class="v" id="hSc">0</div></div>
+</div>
+
+<canvas id="cv" width="508" height="396"></canvas>
+
+<div class="pad">
+  <button class="dbtn" id="bU">▲</button>
+  <button class="dbtn" id="bL">◀</button>
+  <button class="dbtn" id="bD">▼</button>
+  <button class="dbtn" id="bR">▶</button>
+</div>
+
+<div class="tip">吃光所有苹果，传送门就会打开 · Eat every apple to open the portal</div>
+
+<div class="ov" id="ov"><div class="card" id="card"></div></div>
+
+<script>
+// ── Level maps ───────────────────────────────────────────────
+//  # wall   a apple   S snake start   P portal   (space) floor
+const LEVELS = [
+[
+'#################',
+'#               #',
+'#   a a a a a   #',
+'#               #',
+'#               #',
+'# S             #',
+'#               #',
+'#   a a a a a   #',
+'#               #',
+'#               #',
+'#              P#',
+'#               #',
+'#################',
+],
+[
+'#################',
+'#               #',
+'#  a a a a a a  #',
+'#               #',
+'#   ##     ##   #',
+'# S ##     ##   #',
+'#   ##     ##   #',
+'#   ##     ##   #',
+'#               #',
+'#  a a a a a a  #',
+'#               #',
+'#             P #',
+'#################',
+],
+[
+'#################',
+'# S             #',
+'#   a a a a     #',
+'#               #',
+'#####   #########',
+'#               #',
+'#   a a a a     #',
+'#               #',
+'#######   #######',
+'#               #',
+'#   a a a a     #',
+'#            P  #',
+'#################',
+],
+[
+'#################',
+'# S             #',
+'#  a a a a a a  #',
+'#               #',
+'#   #########   #',
+'#   #       #   #',
+'#   #   P   #   #',
+'#   #       #   #',
+'#   ####  ###   #',
+'#               #',
+'#  a a a a a a  #',
+'#               #',
+'#################',
+],
+[
+'#################',
+'# S             #',
+'#  a a a a a a  #',
+'#               #',
+'# ## ## ## ## # #',
+'# ## ## ## ## # #',
+'# ## ## ## ## # #',
+'#               #',
+'#  a a a a a a  #',
+'#               #',
+'# ############# #',
+'#              P#',
+'#################',
+],
+[
+'#################',
+'# S             #',
+'#  ###########  #',
+'#  #a a a a a#  #',
+'#  # ####### #  #',
+'#  # #     # #  #',
+'#  # #  P  # #  #',
+'#  # #     # #  #',
+'#  # ##### # #  #',
+'#  #a a a a#    #',
+'#  ######### ####',
+'#  a a a a a    #',
+'#################',
+],
+];
+
+const COLS = 17, ROWS = 13, CELL = 28, PAD = 16;
+const STEP0 = 190, STEP_MIN = 115;
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+// ── State ────────────────────────────────────────────────────
+let grid, snake, prev, dir, queue, apples, total, portal;
+let level = 0, score = 0, state = 'ready', t = 0, acc = 0, last = 0;
+let step = STEP0, portalOpen = false, spin = 0, deaths = 0;
+
+function cellAt(x, y){ return grid[y][x]; }
+
+function loadLevel(n){
+  const map = LEVELS[n];
+  grid = map.map(r => r.split(''));
+  apples = []; portal = null;
+  let start = null;
+  for (let y = 0; y < ROWS; y++){
+    for (let x = 0; x < COLS; x++){
+      const c = grid[y][x];
+      if (c === 'a'){ apples.push({x, y}); grid[y][x] = ' '; }
+      else if (c === 'S'){ start = {x, y}; grid[y][x] = ' '; }
+      else if (c === 'P'){ portal = {x, y}; grid[y][x] = ' '; }
+    }
+  }
+  total = apples.length;
+  // All three segments start stacked, so a start cell beside a wall is fine.
+  snake = [{...start}, {...start}, {...start}];
+  prev = snake.map(s => ({...s}));
+  dir = {x: 1, y: 0};
+  queue = [];
+  portalOpen = false;
+  step = Math.max(STEP_MIN, STEP0 - n * 14);
+  acc = 0; t = 0;
+  updHUD();
+}
+
+function updHUD(){
+  document.getElementById('hLv').textContent = (level + 1) + ' / ' + LEVELS.length;
+  document.getElementById('hAp').textContent = (total - apples.length) + ' / ' + total;
+  document.getElementById('hSc').textContent = score;
+}
+
+// ── Input ────────────────────────────────────────────────────
+function turn(nx, ny){
+  if (state !== 'play') return;
+  // Compare against the last queued turn, not the current heading, so two
+  // quick taps (e.g. up then left) both register inside one step.
+  const base = queue.length ? queue[queue.length - 1] : dir;
+  if (base.x === -nx && base.y === -ny) return;   // no 180° reversal
+  if (base.x === nx && base.y === ny) return;
+  if (queue.length < 2) queue.push({x: nx, y: ny});
+}
+const DIRS = {
+  ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
+  w:[0,-1], s:[0,1], a:[-1,0], d:[1,0], W:[0,-1], S:[0,1], A:[-1,0], D:[1,0],
+};
+document.addEventListener('keydown', e => {
+  const d = DIRS[e.key];
+  if (d){ turn(d[0], d[1]); e.preventDefault(); }
+  else if (e.key === ' '){ if (state === 'ready') begin(); e.preventDefault(); }
+});
+document.getElementById('bU').onclick = () => turn(0,-1);
+document.getElementById('bD').onclick = () => turn(0, 1);
+document.getElementById('bL').onclick = () => turn(-1,0);
+document.getElementById('bR').onclick = () => turn(1, 0);
+
+let tsx = 0, tsy = 0;
+cv.addEventListener('touchstart', e => { tsx = e.touches[0].clientX; tsy = e.touches[0].clientY; }, {passive:true});
+cv.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - tsx, dy = e.changedTouches[0].clientY - tsy;
+  if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
+  if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0);
+  else turn(0, dy > 0 ? 1 : -1);
+}, {passive:true});
+
+// ── Audio ────────────────────────────────────────────────────
+let ac = null;
+function tone(f, d, v, ty){
+  try{
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = ty || 'triangle'; o.frequency.value = f;
+    const n = ac.currentTime;
+    g.gain.setValueAtTime(0, n);
+    g.gain.linearRampToValueAtTime(v || .1, n + .01);
+    g.gain.exponentialRampToValueAtTime(.0001, n + d);
+    o.start(n); o.stop(n + d + .02);
+  }catch(e){}
+}
+const SFX = {
+  eat(){ tone(680, .1, .1); setTimeout(() => tone(900, .09, .08), 55); },
+  open(){ [523,659,784,1047].forEach((f,i) => setTimeout(() => tone(f,.17,.11), i*85)); },
+  win(){ [523,659,784,1047,1318].forEach((f,i) => setTimeout(() => tone(f,.2,.12), i*95)); },
+  die(){ [330,247,185].forEach((f,i) => setTimeout(() => tone(f,.22,.11,'sawtooth'), i*120)); },
+};
+
+// ── Step ─────────────────────────────────────────────────────
+function stepSnake(){
+  if (queue.length) dir = queue.shift();
+  const h = snake[0];
+  const nx = h.x + dir.x, ny = h.y + dir.y;
+
+  if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS || cellAt(nx, ny) === '#') return die();
+  // The tail cell frees up on this same step, so moving into it is legal.
+  for (let i = 0; i < snake.length - 1; i++)
+    if (snake[i].x === nx && snake[i].y === ny) return die();
+
+  prev = snake.map(s => ({...s}));
+  snake.unshift({x: nx, y: ny});
+
+  const ai = apples.findIndex(a => a.x === nx && a.y === ny);
+  if (ai >= 0){
+    apples.splice(ai, 1);
+    score += 10;
+    SFX.eat();
+    if (!apples.length && !portalOpen){ portalOpen = true; SFX.open(); }
+    updHUD();
+  } else {
+    snake.pop();
+    prev.pop();
+  }
+  // keep prev the same length as snake so the render lerp stays aligned
+  while (prev.length < snake.length) prev.push({...prev[prev.length - 1]});
+
+  if (portalOpen && portal && nx === portal.x && ny === portal.y) winLevel();
+}
+
+function die(){
+  state = 'dead'; deaths++;
+  SFX.die();
+  show('💥', '撞到啦！Crash!', '再试一次，这一关会重新开始。<br>Try again — the level restarts.',
+       [['🔄 重玩本关 Retry', 'retryLevel()', '']]);
+}
+
+function winLevel(){
+  score += 50;
+  updHUD();
+  if (level + 1 >= LEVELS.length){
+    state = 'done'; SFX.win();
+    show('🏆', '全部通关！All levels done!',
+         `最终得分 Final score: <b>${score}</b><br>失误 ${deaths} 次`,
+         [['🔄 再玩一次 Play again', 'restart()', '']]);
+  } else {
+    state = 'cleared'; SFX.win();
+    show('🌀', '穿过传送门！Portal!', `第 ${level + 1} 关通过！得分 ${score}`,
+         [['▶ 下一关 Next level', 'nextLevel()', '']]);
+  }
+}
+
+function retryLevel(){ hide(); loadLevel(level); state = 'play'; }
+function nextLevel(){ hide(); level++; loadLevel(level); state = 'play'; }
+function restart(){ hide(); level = 0; score = 0; deaths = 0; loadLevel(0); state = 'play'; }
+function begin(){ hide(); state = 'play'; }
+
+function show(ico, title, body, btns){
+  document.getElementById('card').innerHTML =
+    `<div class="big">${ico}</div><h2>${title}</h2><p>${body}</p>` +
+    btns.map(b => `<button class="btn ${b[2]}" onclick="${b[1]}">${b[0]}</button>`).join('');
+  document.getElementById('ov').classList.add('on');
+}
+function hide(){ document.getElementById('ov').classList.remove('on'); }
+
+// ── Scenery (drawn once) ─────────────────────────────────────
+const bg = document.createElement('canvas');
+bg.width = cv.width; bg.height = cv.height;
+(function paintBg(){
+  const g = bg.getContext('2d'), W = bg.width, H = bg.height;
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#6fc0ef'); sky.addColorStop(.55, '#aadcf5'); sky.addColorStop(1, '#d8eecf');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+
+  // distant mountain
+  g.fillStyle = 'rgba(150,185,205,.55)';
+  g.beginPath(); g.moveTo(W*.18, H*.62); g.lineTo(W*.42, H*.17); g.lineTo(W*.68, H*.62); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.7)';
+  g.beginPath(); g.moveTo(W*.36, H*.27); g.lineTo(W*.42, H*.17); g.lineTo(W*.49, H*.27);
+  g.lineTo(W*.45, H*.3); g.lineTo(W*.41, H*.25); g.lineTo(W*.38, H*.3); g.closePath(); g.fill();
+
+  // tree line
+  g.fillStyle = '#6aa84f';
+  for (let x = -20; x < W + 20; x += 26){
+    const r = 20 + ((x * 37) % 13);
+    g.beginPath(); g.arc(x, H*.66, r, 0, Math.PI*2); g.fill();
+  }
+  g.fillStyle = '#4e8a3a';
+  for (let x = -10; x < W + 20; x += 31){
+    const r = 16 + ((x * 53) % 11);
+    g.beginPath(); g.arc(x, H*.73, r, 0, Math.PI*2); g.fill();
+  }
+  // grass
+  const gr = g.createLinearGradient(0, H*.74, 0, H);
+  gr.addColorStop(0, '#79bd52'); gr.addColorStop(1, '#4e9138');
+  g.fillStyle = gr; g.fillRect(0, H*.74, W, H*.26);
+})();
+
+// ── Drawing helpers ──────────────────────────────────────────
+function px(x){ return PAD + x * CELL; }
+
+function rr(g, x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x+r, y); g.arcTo(x+w, y, x+w, y+h, r); g.arcTo(x+w, y+h, x, y+h, r);
+  g.arcTo(x, y+h, x, y, r); g.arcTo(x, y, x+w, y, r); g.closePath();
+}
+
+function drawApple(g, cx, cy, s){
+  g.save(); g.translate(cx, cy); g.scale(s, s);
+  g.fillStyle = '#2f7d32'; g.fillRect(-1.5, -12, 3, 6);              // stem
+  g.fillStyle = '#4caf50';
+  g.beginPath(); g.ellipse(5, -10, 5, 2.6, -.5, 0, Math.PI*2); g.fill();  // leaf
+  const grd = g.createRadialGradient(-3, -3, 1, 0, 0, 11);
+  grd.addColorStop(0, '#ff6b5e'); grd.addColorStop(1, '#c62828');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.arc(-4, 0, 7, 0, Math.PI*2); g.arc(4, 0, 7, 0, Math.PI*2);
+  g.ellipse(0, 2, 9, 8, 0, 0, Math.PI*2);
+  g.fill();
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  g.beginPath(); g.ellipse(-4, -4, 2.4, 1.6, -.6, 0, Math.PI*2); g.fill();
+  g.restore();
+}
+
+function drawWall(g, x, y){
+  const X = px(x), Y = px(y);
+  g.fillStyle = '#7a4a22';
+  rr(g, X + 1, Y + 1, CELL - 2, CELL - 2, 5); g.fill();
+  g.fillStyle = '#8f5a2b';
+  rr(g, X + 2, Y + 2, CELL - 4, (CELL - 4) / 2, 4); g.fill();
+  g.strokeStyle = 'rgba(60,30,10,.45)'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(X + 3, Y + CELL/2); g.lineTo(X + CELL - 3, Y + CELL/2); g.stroke();
+}
+
+function drawPortal(g, x, y, open, sp){
+  const cx = px(x) + CELL/2, cy = px(y) + CELL/2;
+  g.save(); g.translate(cx, cy);
+  if (open){
+    g.rotate(sp);
+    const gr = g.createRadialGradient(0, 0, 1, 0, 0, 15);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(.35, '#7cf3ff');
+    gr.addColorStop(.7, '#2b6cff'); gr.addColorStop(1, 'rgba(20,10,60,.2)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(0, 0, 14, 0, Math.PI*2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2;
+    for (let i = 0; i < 3; i++){
+      g.beginPath();
+      g.arc(0, 0, 5 + i * 3.2, i * 2, i * 2 + 2.3);
+      g.stroke();
+    }
+  } else {
+    g.fillStyle = '#241a2e';
+    g.beginPath(); g.arc(0, 0, 12, 0, Math.PI*2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 2;
+    g.beginPath(); g.arc(0, 0, 8, 0, Math.PI*2); g.stroke();
+  }
+  g.restore();
+}
+
+function lerp(a, b, k){ return a + (b - a) * k; }
+
+function drawSnake(g, k){
+  // Stroke one continuous rounded path through every segment centre; drawing
+  // each segment as its own circle left visible gaps, because a 22px circle
+  // cannot span the 28px distance between two cells.
+  const pts = snake.map((c, i) => {
+    const p = prev[Math.min(i, prev.length - 1)];
+    return { x: px(lerp(p.x, c.x, k)) + CELL/2, y: px(lerp(p.y, c.y, k)) + CELL/2 };
+  });
+
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const path = () => {
+    g.beginPath();
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+    if (pts.length === 1) g.lineTo(pts[0].x + .01, pts[0].y);
+  };
+
+  g.strokeStyle = '#2f7d32'; g.lineWidth = 23; path(); g.stroke();   // outline
+  g.strokeStyle = '#4caf50'; g.lineWidth = 19; path(); g.stroke();   // body
+  g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 7; path(); g.stroke(); // sheen
+
+  // scale dots for texture
+  g.fillStyle = 'rgba(32,90,35,.33)';
+  for (let i = 2; i < pts.length; i += 2){
+    g.beginPath(); g.arc(pts[i].x, pts[i].y, 3.6, 0, Math.PI*2); g.fill();
+  }
+
+  // head
+  const h = pts[0];
+  g.fillStyle = '#5cd65c';
+  g.beginPath(); g.arc(h.x, h.y, 12.5, 0, Math.PI*2); g.fill();
+  g.strokeStyle = '#2f7d32'; g.lineWidth = 2;
+  g.beginPath(); g.arc(h.x, h.y, 12.5, 0, Math.PI*2); g.stroke();
+
+  const ex = dir.x * 4.5, ey = dir.y * 4.5;
+  const sx = dir.x ? 0 : 4.5, sy = dir.x ? 4.5 : 0;
+  for (const side of [1, -1]){
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(h.x + ex + sx*side, h.y + ey + sy*side, 3.6, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#111';
+    g.beginPath(); g.arc(h.x + ex*1.35 + sx*side, h.y + ey*1.35 + sy*side, 1.9, 0, Math.PI*2); g.fill();
+  }
+}
+
+function draw(){
+  ctx.drawImage(bg, 0, 0);
+
+  // decorative apple frame
+  for (let x = 0; x < COLS; x++){
+    drawApple(ctx, px(x) + CELL/2, PAD/2 + 1, .52);
+    drawApple(ctx, px(x) + CELL/2, cv.height - PAD/2 - 1, .52);
+  }
+  for (let y = 0; y < ROWS; y++){
+    drawApple(ctx, PAD/2 + 1, px(y) + CELL/2, .52);
+    drawApple(ctx, cv.width - PAD/2 - 1, px(y) + CELL/2, .52);
+  }
+
+  // play area tint
+  ctx.fillStyle = 'rgba(255,255,255,.12)';
+  rr(ctx, PAD, PAD, COLS*CELL, ROWS*CELL, 8); ctx.fill();
+
+  for (let y = 0; y < ROWS; y++)
+    for (let x = 0; x < COLS; x++)
+      if (grid[y][x] === '#') drawWall(ctx, x, y);
+
+  if (portal) drawPortal(ctx, portal.x, portal.y, portalOpen, spin);
+  for (const a of apples) drawApple(ctx, px(a.x) + CELL/2, px(a.y) + CELL/2, 1);
+  drawSnake(ctx, state === 'play' ? t : 1);
+}
+
+// ── Loop ─────────────────────────────────────────────────────
+function loop(ts){
+  const dt = Math.min(60, ts - (last || ts)); last = ts;
+  spin += dt / 400;
+  if (state === 'play'){
+    acc += dt;
+    while (acc >= step && state === 'play'){ acc -= step; stepSnake(); }
+    t = state === 'play' ? Math.min(1, acc / step) : 1;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loadLevel(0);
+show('🍎', '贪吃的苹果蛇', '吃光所有苹果，传送门就会打开——然后钻进去！<br>方向键 / 滑动 / 下方按钮控制。',
+     [['▶ 开始 Start', 'begin()', '']]);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
