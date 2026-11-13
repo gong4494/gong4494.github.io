@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🎹 MIDI 变速播放器 · MIDI Speed Player</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:'Nunito',sans-serif;color:#e9eef7;
+  background:#0b1020;
+  background-image:
+    radial-gradient(900px 480px at 15% -10%, rgba(99,102,241,.22), transparent 60%),
+    radial-gradient(800px 500px at 90% 110%, rgba(236,72,153,.16), transparent 60%);
+  min-height:100vh;padding:16px 14px 40px;
+}
+.wrap{max-width:760px;margin:0 auto;}
+h1{font-size:clamp(1.2rem,4vw,1.7rem);font-weight:900;text-align:center;letter-spacing:.3px;}
+.sub{text-align:center;color:#8b9ac2;font-size:.8rem;margin:5px 0 16px;}
+
+.panel{
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:14px;margin-bottom:12px;
+}
+
+/* drop zone */
+#drop{
+  border:2px dashed rgba(255,255,255,.22);border-radius:14px;
+  padding:16px;text-align:center;transition:background .15s,border-color .15s;
+}
+#drop.hot{background:rgba(99,102,241,.18);border-color:#818cf8;}
+#drop .big{font-size:1.8rem;}
+#drop p{font-size:.82rem;color:#9fb0d4;margin-top:5px;}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+
+.btn{
+  font-family:inherit;font-weight:800;border:none;border-radius:30px;cursor:pointer;
+  padding:9px 18px;font-size:.86rem;color:#fff;
+  background:#4f46e5;box-shadow:0 4px 0 #3730a3;transition:transform .08s,box-shadow .08s,opacity .15s;
+}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #3730a3;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn.ghost{background:rgba(255,255,255,.1);box-shadow:0 4px 0 rgba(0,0,0,.3);}
+.btn.ghost:active{box-shadow:0 1px 0 rgba(0,0,0,.3);}
+.btn.pink{background:#db2777;box-shadow:0 4px 0 #9d174d;}
+.btn.pink:active{box-shadow:0 1px 0 #9d174d;}
+
+/* now playing */
+.np{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.np .ttl{font-weight:900;font-size:1rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tag{background:rgba(255,255,255,.1);border-radius:20px;padding:3px 11px;font-size:.72rem;font-weight:700;color:#b9c6e4;}
+
+canvas{display:block;width:100%;height:auto;border-radius:12px;background:rgba(0,0,0,.35);}
+
+/* transport */
+.bar{height:9px;background:rgba(255,255,255,.12);border-radius:10px;cursor:pointer;overflow:hidden;margin:12px 0 6px;}
+.bar .fill{height:100%;width:0;background:linear-gradient(90deg,#6366f1,#ec4899);border-radius:10px;}
+.times{display:flex;justify-content:space-between;font-size:.72rem;color:#8b9ac2;font-variant-numeric:tabular-nums;}
+
+/* speed */
+.speedhead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;}
+.speedhead .lab{font-size:.78rem;color:#9fb0d4;text-transform:uppercase;letter-spacing:1.5px;}
+.speedval{font-size:1.7rem;font-weight:900;color:#a5b4fc;font-variant-numeric:tabular-nums;}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:7px;border-radius:10px;
+  background:linear-gradient(90deg,#6366f1,#ec4899);outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+  background:#fff;border:3px solid #6366f1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.5);
+}
+input[type=range]::-moz-range-thumb{
+  width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #6366f1;cursor:pointer;
+}
+.bpm{text-align:center;font-size:.82rem;color:#9fb0d4;margin-top:9px;}
+.bpm b{color:#f9a8d4;font-size:1rem;}
+
+.err{color:#fca5a5;font-size:.82rem;text-align:center;margin-top:8px;min-height:18px;}
+.note-sm{font-size:.72rem;color:#7c8aad;line-height:1.6;margin-top:10px;}
+code{background:rgba(255,255,255,.1);padding:1px 6px;border-radius:5px;font-size:.92em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🎹 MIDI 变速播放器</h1>
+  <div class="sub">MIDI Speed Player · 拖入任意 .mid 文件，自由调节速度</div>
+
+  <div class="panel">
+    <div id="drop">
+      <div class="big">🎵</div>
+      <strong>把 .mid 文件拖到这里</strong>
+      <p>Drop a MIDI file here, or pick one below</p>
+      <div class="row">
+        <button class="btn" id="pick">📂 选择文件 Choose file</button>
+        <button class="btn pink" id="hj">🎼 Hey Jude</button>
+        <button class="btn ghost" id="d1">▶ 欢乐颂 Ode to Joy</button>
+        <button class="btn ghost" id="d2">▶ 小星星 Twinkle</button>
+      </div>
+      <input type="file" id="file" accept=".mid,.midi,audio/midi" hidden>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="panel">
+    <div class="np">
+      <span class="ttl" id="title">— 还没有载入文件 —</span>
+      <span class="tag" id="tagNotes">0 音符</span>
+      <span class="tag" id="tagBpm">— BPM</span>
+    </div>
+    <canvas id="vis" width="720" height="240" style="margin-top:10px"></canvas>
+    <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
+    <div class="times"><span id="tNow">0:00</span><span id="tEnd">0:00</span></div>
+    <div class="row">
+      <button class="btn" id="play" disabled>▶ 播放</button>
+      <button class="btn ghost" id="stop" disabled>⏹ 停止</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="speedhead">
+      <span class="lab">速度 Speed</span>
+      <span class="speedval" id="spVal">1.00×</span>
+    </div>
+    <input type="range" id="speed" min="25" max="300" value="100" step="1">
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost sp" data-s="50">0.5×</button>
+      <button class="btn ghost sp" data-s="75">0.75×</button>
+      <button class="btn ghost sp" data-s="100">1×</button>
+      <button class="btn ghost sp" data-s="150">1.5×</button>
+      <button class="btn ghost sp" data-s="200">2×</button>
+    </div>
+    <div class="bpm">原速 <span id="bpm0">—</span> BPM &nbsp;→&nbsp; 现在 <b id="bpmNow">—</b> BPM</div>
+    <div class="note-sm">
+      变速只改播放速度，音高不变（MIDI 是音符数据，不是录音）。<br>
+      Changing speed does not change pitch — MIDI stores notes, not audio.
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ════════ MIDI parsing (Standard MIDI File) ════════
+function readStr(dv, p, n){
+  let s = '';
+  for (let i = 0; i < n; i++) s += String.fromCharCode(dv.getUint8(p + i));
+  return s;
+}
+function readVLQ(dv, p){
+  let v = 0, b;
+  do { b = dv.getUint8(p++); v = (v << 7) | (b & 0x7f); } while (b & 0x80);
+  return [v, p];
+}
+
+function parseMidi(ab){
+  const dv = new DataView(ab);
+  if (dv.byteLength < 14 || readStr(dv, 0, 4) !== 'MThd')
+    throw new Error('这不是 MIDI 文件（缺少 MThd 头）');
+
+  const headLen = dv.getUint32(4);
+  const ntrks   = dv.getUint16(10);
+  const division = dv.getUint16(12);
+  let p = 8 + headLen;
+
+  const tempos = [];       // {tick, us}
+  const raw = [];          // {tick, on, ch, note, vel}
+  let name = '';
+
+  for (let t = 0; t < ntrks && p + 8 <= dv.byteLength; t++){
+    if (readStr(dv, p, 4) !== 'MTrk'){ p += 4; continue; }
+    p += 4;
+    const len = dv.getUint32(p); p += 4;
+    const end = Math.min(p + len, dv.byteLength);
+    let tick = 0, running = 0;
+
+    while (p < end){
+      let d; [d, p] = readVLQ(dv, p); tick += d;
+      if (p >= end) break;
+      let status = dv.getUint8(p);
+      if (status < 0x80){ status = running; } else { p++; running = status; }
+      const hi = status & 0xf0, ch = status & 0x0f;
+
+      if (status === 0xff){
+        const type = dv.getUint8(p++);
+        let l; [l, p] = readVLQ(dv, p);
+        if (type === 0x51 && l === 3){
+          tempos.push({ tick, us: (dv.getUint8(p) << 16) | (dv.getUint8(p+1) << 8) | dv.getUint8(p+2) });
+        } else if ((type === 0x03 || type === 0x01) && !name && l > 0 && l < 60){
+          const s = readStr(dv, p, l).trim();
+          if (s) name = s;
+        }
+        p += l; running = 0;
+      } else if (status === 0xf0 || status === 0xf7){
+        let l; [l, p] = readVLQ(dv, p); p += l; running = 0;
+      } else if (hi === 0x80 || hi === 0x90 || hi === 0xa0 || hi === 0xb0 || hi === 0xe0){
+        const a = dv.getUint8(p++), b = dv.getUint8(p++);
+        if (hi === 0x90 && b > 0) raw.push({ tick, on: true,  ch, note: a, vel: b });
+        else if (hi === 0x80 || hi === 0x90) raw.push({ tick, on: false, ch, note: a, vel: 0 });
+      } else if (hi === 0xc0 || hi === 0xd0){
+        p++;
+      } else {
+        break;   // unrecognised: abandon this track rather than mis-read the rest
+      }
+    }
+    p = end;
+  }
+
+  // ticks -> seconds at 1.0x, honouring every tempo change
+  let tickToSec;
+  if (division & 0x8000){                       // SMPTE timing: tempo-independent
+    const fps = 256 - ((division >> 8) & 0xff);
+    const tpf = division & 0xff;
+    const spt = 1 / (fps * tpf);
+    tickToSec = tk => tk * spt;
+  } else {
+    const ppq = division || 480;
+    tempos.sort((a, b) => a.tick - b.tick);
+    const pts = [{ tick: 0, sec: 0, spt: 500000 / 1e6 / ppq }];
+    for (const t of tempos){
+      const cur = pts[pts.length - 1];
+      if (t.tick <= cur.tick){ cur.spt = t.us / 1e6 / ppq; continue; }
+      pts.push({ tick: t.tick, sec: cur.sec + (t.tick - cur.tick) * cur.spt, spt: t.us / 1e6 / ppq });
+    }
+    tickToSec = tk => {
+      let i = 0;
+      while (i + 1 < pts.length && pts[i + 1].tick <= tk) i++;
+      return pts[i].sec + (tk - pts[i].tick) * pts[i].spt;
+    };
+  }
+
+  // pair note-ons with note-offs
+  raw.sort((a, b) => a.tick - b.tick || (a.on ? 1 : -1));
+  const open = new Map();
+  const notes = [];
+  for (const e of raw){
+    const key = e.ch * 128 + e.note;
+    if (e.on){
+      if (!open.has(key)) open.set(key, []);
+      open.get(key).push(e);
+    } else {
+      const st = open.get(key);
+      if (st && st.length){
+        const s = st.shift();
+        notes.push({ start: tickToSec(s.tick), dur: Math.max(.03, tickToSec(e.tick) - tickToSec(s.tick)),
+                     midi: e.note, vel: s.vel, ch: e.ch });
+      }
+    }
+  }
+  // notes still held at end of file
+  for (const st of open.values())
+    for (const s of st)
+      notes.push({ start: tickToSec(s.tick), dur: .5, midi: s.note, vel: s.vel, ch: s.ch });
+
+  if (!notes.length) throw new Error('这个 MIDI 文件里没有音符');
+  notes.sort((a, b) => a.start - b.start);
+
+  const firstTempo = tempos.length ? tempos[0].us : 500000;
+  return {
+    notes, name,
+    duration: Math.max(...notes.map(n => n.start + n.dur)) + .6,
+    bpm: Math.round(60000000 / firstTempo),
+  };
+}
+
+// ════════ tiny MIDI writer (public-domain demo tunes) ════════
+function vlqBytes(n){
+  const out = [n & 0x7f];
+  n >>= 7;
+  while (n > 0){ out.unshift((n & 0x7f) | 0x80); n >>= 7; }
+  return out;
+}
+function buildMidi(pairs, bpm, ppq){
+  ppq = ppq || 480;
+  const evs = [];
+  let beat = 0;
+  for (const [m, d] of pairs){
+    if (m > 0){
+      evs.push({ t: Math.round(beat * ppq), b: [0x90, m, 92] });
+      evs.push({ t: Math.round((beat + d * .92) * ppq), b: [0x80, m, 0] });
+    }
+    beat += d;
+  }
+  evs.sort((a, b) => a.t - b.t);
+  const us = Math.round(60000000 / bpm);
+  const data = [...vlqBytes(0), 0xff, 0x51, 0x03, (us >> 16) & 255, (us >> 8) & 255, us & 255];
+  let last = 0;
+  for (const e of evs){ data.push(...vlqBytes(e.t - last), ...e.b); last = e.t; }
+  data.push(...vlqBytes(0), 0xff, 0x2f, 0x00);
+  const L = data.length;
+  const bytes = [
+    0x4d,0x54,0x68,0x64, 0,0,0,6, 0,0, 0,1, (ppq >> 8) & 255, ppq & 255,
+    0x4d,0x54,0x72,0x6b, (L>>>24)&255, (L>>>16)&255, (L>>>8)&255, L&255,
+    ...data,
+  ];
+  return new Uint8Array(bytes).buffer;
+}
+
+const ODE = [[64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],
+             [60,1],[60,1],[62,1],[64,1],[64,1.5],[62,.5],[62,2],
+             [64,1],[64,1],[65,1],[67,1],[67,1],[65,1],[64,1],[62,1],
+             [60,1],[60,1],[62,1],[64,1],[62,1.5],[60,.5],[60,2]];
+const TWINKLE = [[60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],
+                 [65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2],
+                 [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
+                 [67,1],[67,1],[65,1],[65,1],[64,1],[64,1],[62,2],
+                 [60,1],[60,1],[67,1],[67,1],[69,1],[69,1],[67,2],
+                 [65,1],[65,1],[64,1],[64,1],[62,1],[62,1],[60,2]];
+
+// ════════ audio ════════
+let ac = null, master = null;
+function audio(){
+  if (!ac){
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain();
+    master.gain.value = .9;
+    const comp = ac.createDynamicsCompressor();
+    master.connect(comp); comp.connect(ac.destination);
+  }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+
+const live = [];
+function voice(n, when, dur){
+  if (n.ch === 9) return drum(n, when);              // percussion channel
+  const f = 440 * Math.pow(2, (n.midi - 69) / 12);
+  const g = ac.createGain(), lp = ac.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = Math.min(9000, f * 7);
+  const o1 = ac.createOscillator(), o2 = ac.createOscillator();
+  o1.type = 'triangle'; o1.frequency.value = f;
+  o2.type = 'sine';     o2.frequency.value = f; o2.detune.value = 7;
+  const peak = Math.max(.03, (n.vel / 127) * .17);
+  g.gain.setValueAtTime(0, when);
+  g.gain.linearRampToValueAtTime(peak, when + .014);
+  g.gain.linearRampToValueAtTime(peak * .66, when + Math.min(.18, dur * .5));
+  g.gain.setTargetAtTime(.0001, when + Math.max(.05, dur * .88), .07);
+  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(master);
+  o1.start(when); o2.start(when);
+  const off = when + dur + .45;
+  o1.stop(off); o2.stop(off);
+  live.push(o1, o2);
+}
+function drum(n, when){
+  const len = .12;
+  const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * len), ac.sampleRate);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length);
+  const src = ac.createBufferSource(); src.buffer = buf;
+  const bp = ac.createBiquadFilter();
+  bp.type = n.midi < 44 ? 'lowpass' : 'highpass';
+  bp.frequency.value = n.midi < 44 ? 220 : 2600;
+  const g = ac.createGain(); g.gain.value = .14;
+  src.connect(bp); bp.connect(g); g.connect(master);
+  src.start(when);
+  live.push(src);
+}
+function killVoices(){
+  for (const v of live){ try { v.stop(); } catch(e){} }
+  live.length = 0;
+}
+
+// ════════ state / transport ════════
+let song = null, speed = 1;
+let playing = false, idx = 0;
+let startCtx = 0, startSong = 0, pausedAt = 0;
+let schedTimer = null;
+const LOOKAHEAD = .25;
+
+const $ = id => document.getElementById(id);
+const fmt = s => { s = Math.max(0, s); return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0'); };
+
+function songPos(){
+  if (!song) return 0;
+  return playing ? startSong + (ac.currentTime - startCtx) * speed : pausedAt;
+}
+
+function schedule(){
+  if (!playing || !song) return;
+  const pos = songPos();
+  const until = pos + LOOKAHEAD * speed;
+  while (idx < song.notes.length && song.notes[idx].start < until){
+    const n = song.notes[idx++];
+    const when = startCtx + (n.start - startSong) / speed;
+    if (when >= ac.currentTime - .02) voice(n, Math.max(when, ac.currentTime), n.dur / speed);
+  }
+  if (pos >= song.duration) { stop(); }
+}
+
+function play(){
+  if (!song) return;
+  audio();
+  if (playing) { pause(); return; }
+  playing = true;
+  startSong = pausedAt >= song.duration ? 0 : pausedAt;
+  startCtx = ac.currentTime + .05;
+  idx = song.notes.findIndex(n => n.start >= startSong);
+  if (idx < 0) idx = song.notes.length;
+  schedTimer = setInterval(schedule, 25);
+  schedule();
+  $('play').textContent = '⏸ 暂停';
+}
+function pause(){
+  if (!playing) return;
+  pausedAt = songPos();
+  playing = false;
+  clearInterval(schedTimer); schedTimer = null;
+  killVoices();
+  $('play').textContent = '▶ 播放';
+}
+function stop(){
+  playing = false;
+  clearInterval(schedTimer); schedTimer = null;
+  killVoices();
+  pausedAt = 0;
+  $('play').textContent = '▶ 播放';
+}
+function seek(frac){
+  if (!song) return;
+  const was = playing;
+  pause();
+  pausedAt = Math.max(0, Math.min(song.duration, frac * song.duration));
+  if (was) play();
+}
+
+// Changing speed mid-playback: re-anchor the clock at the current position and
+// re-aim the scheduler, otherwise every already-queued note keeps the old rate.
+function setSpeed(v){
+  speed = v;
+  $('spVal').textContent = v.toFixed(2) + '×';
+  if (song) $('bpmNow').textContent = Math.round(song.bpm * v);
+  if (playing){
+    const pos = songPos();
+    killVoices();
+    startSong = pos;
+    startCtx = ac.currentTime + .03;
+    idx = song.notes.findIndex(n => n.start >= pos);
+    if (idx < 0) idx = song.notes.length;
+  }
+}
+
+// ════════ load ════════
+function load(ab, label){
+  try {
+    const s = parseMidi(ab);
+    stop();
+    song = s;
+    $('title').textContent = label || s.name || 'MIDI';
+    $('tagNotes').textContent = s.notes.length + ' 音符';
+    $('tagBpm').textContent = s.bpm + ' BPM';
+    $('bpm0').textContent = s.bpm;
+    $('bpmNow').textContent = Math.round(s.bpm * speed);
+    $('tEnd').textContent = fmt(s.duration);
+    const pitches = s.notes.filter(n => n.ch !== 9).map(n => n.midi);
+    if (pitches.length){
+      LO = Math.max(21, Math.min(...pitches) - 2);
+      HI = Math.min(108, Math.max(...pitches) + 2);
+      if (HI - LO < 14){ const c = (LO + HI) / 2; LO = Math.round(c - 7); HI = Math.round(c + 7); }
+    }
+    $('play').disabled = false; $('stop').disabled = false;
+    $('err').textContent = '';
+  } catch (e){
+    $('err').textContent = '❌ ' + e.message;
+  }
+}
+function loadFile(f){
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => load(r.result, f.name.replace(/\.(mid|midi)$/i, ''));
+  r.onerror = () => { $('err').textContent = '❌ 读取文件失败'; };
+  r.readAsArrayBuffer(f);
+}
+
+$('pick').onclick = () => $('file').click();
+$('file').onchange = e => loadFile(e.target.files[0]);
+
+const drop = $('drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.add('hot');
+}));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+  e.preventDefault(); drop.classList.remove('hot');
+}));
+drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+
+$('d1').onclick = () => load(buildMidi(ODE, 120), '欢乐颂 Ode to Joy (public domain)');
+$('d2').onclick = () => load(buildMidi(TWINKLE, 120), '小星星 Twinkle (public domain)');
+
+$('hj').onclick = async () => {
+  $('err').textContent = '载入中…';
+  try {
+    const r = await fetch('midi/heyjude.mid');
+    if (!r.ok) throw 0;
+    load(await r.arrayBuffer(), 'Hey Jude');
+  } catch (e){
+    $('err').innerHTML = '找不到 <code>midi/heyjude.mid</code> — 把你自己的 Hey Jude MIDI ' +
+      '放到仓库的 <code>midi/</code> 文件夹并命名为 <code>heyjude.mid</code>，或直接把文件拖到上面。';
+  }
+};
+
+$('play').onclick = play;
+$('stop').onclick = stop;
+$('bar').onclick = e => {
+  const r = $('bar').getBoundingClientRect();
+  seek((e.clientX - r.left) / r.width);
+};
+$('speed').oninput = e => setSpeed(e.target.value / 100);
+document.querySelectorAll('.sp').forEach(b => b.onclick = () => {
+  $('speed').value = b.dataset.s;
+  setSpeed(b.dataset.s / 100);
+});
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space'){ e.preventDefault(); play(); }
+});
+
+// ════════ visualiser ════════
+const cv = $('vis'), g = cv.getContext('2d');
+let LO = 36, HI = 96;
+const SPAN = 3.0;   // seconds of lookahead shown
+
+function draw(){
+  const W = cv.width, H = cv.height, KB = 34, field = H - KB;
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(0, 0, W, field);
+
+  const pos = songPos();
+  const active = new Set();
+
+  if (song){
+    for (const n of song.notes){
+      if (n.start + n.dur < pos - .15) continue;
+      if (n.start > pos + SPAN) break;
+      const x = ((n.midi - LO) / (HI - LO)) * W;
+      const w = Math.max(3, W / (HI - LO) - 2);
+      const yTop = field - ((n.start + n.dur - pos) / SPAN) * field;
+      const yBot = field - ((n.start - pos) / SPAN) * field;
+      const h = Math.max(3, yBot - yTop);
+      const hit = n.start <= pos && pos <= n.start + n.dur;
+      if (hit) active.add(n.midi);
+      g.fillStyle = hit ? '#f9a8d4'
+                        : (n.ch === 9 ? 'rgba(148,163,184,.55)' : 'rgba(129,140,248,.72)');
+      g.beginPath();
+      g.roundRect(x, Math.max(0, yTop), w, Math.min(h, field - Math.max(0, yTop)), 3);
+      g.fill();
+    }
+  }
+
+  // hit line
+  g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(0, field); g.lineTo(W, field); g.stroke();
+
+  // keyboard: whites first, then blacks drawn shorter on top
+  const BLACK = [1,3,6,8,10];
+  const kw = W / (HI - LO);
+  for (let m = LO; m <= HI; m++){
+    if (BLACK.includes(m % 12)) continue;
+    const x = ((m - LO) / (HI - LO)) * W;
+    g.fillStyle = active.has(m) ? '#f472b6' : '#e7ecf6';
+    g.fillRect(x, field + 2, Math.max(1, kw - 1), KB - 4);
+  }
+  for (let m = LO; m <= HI; m++){
+    if (!BLACK.includes(m % 12)) continue;
+    const x = ((m - LO) / (HI - LO)) * W;
+    g.fillStyle = active.has(m) ? '#ec4899' : '#131a29';
+    g.fillRect(x + kw * .12, field + 2, Math.max(1, kw * .76), (KB - 4) * .62);
+  }
+
+  if (song){
+    const f = Math.min(1, pos / song.duration);
+    $('fill').style.width = (f * 100) + '%';
+    $('tNow').textContent = fmt(pos);
+  }
+  requestAnimationFrame(draw);
+}
+if (!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    this.beginPath(); this.moveTo(x+r,y);
+    this.arcTo(x+w,y,x+w,y+h,r); this.arcTo(x+w,y+h,x,y+h,r);
+    this.arcTo(x,y+h,x,y,r); this.arcTo(x,y,x+w,y,r); this.closePath();
+  };
+}
+requestAnimationFrame(draw);
+
+// expose for tests
+window.__midi = { parseMidi, buildMidi, load, songPos, get song(){ return song; },
+                  get speed(){ return speed; }, setSpeed, play, pause, stop };
+</script>
+</body>
+</html>
