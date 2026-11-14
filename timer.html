@@ -12,106 +12,153 @@ body{
   font-family:'Nunito',sans-serif;color:#e8eef8;
   background:#0a0f1c;
   background-image:
-    radial-gradient(800px 420px at 50% -8%, rgba(56,189,248,.18), transparent 62%),
-    radial-gradient(700px 420px at 50% 108%, rgba(16,185,129,.12), transparent 62%);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;padding:16px;transition:background-color .25s;
+    radial-gradient(900px 480px at 50% -8%, rgba(56,189,248,.18), transparent 62%),
+    radial-gradient(800px 480px at 50% 108%, rgba(16,185,129,.12), transparent 62%);
+  display:flex;align-items:center;justify-content:center;
+  /* generous edge padding: TVs overscan and can crop the outer few percent */
+  padding:clamp(14px,3.2vmin,54px);
+  transition:background-color .25s;
 }
 body.warn{background-color:#2a0f14;}
 body.flash{animation:flashbg .55s ease-out 3;}
 @keyframes flashbg{0%,100%{background-color:#0a0f1c;}50%{background-color:#3b0a12;}}
 
-h1{font-size:clamp(1rem,3.4vw,1.25rem);font-weight:900;letter-spacing:.5px;}
+/* Phone: teams side by side, timer underneath.
+   Wide screen / TV: team | timer | team, so a 16:9 panel is actually used. */
+.stage{
+  display:grid;width:100%;max-width:2000px;
+  gap:clamp(10px,2.2vmin,34px);
+  grid-template-columns:1fr 1fr;
+  grid-template-areas:"strong smart" "center center";
+  align-items:start;justify-items:stretch;
+}
+#strong{grid-area:strong;}
+#smart{grid-area:smart;}
+.center{
+  grid-area:center;display:flex;flex-direction:column;align-items:center;
+  gap:clamp(8px,1.8vmin,24px);
+}
+@media (min-width:900px){
+  .stage{
+    grid-template-columns:1fr minmax(320px,1.05fr) 1fr;
+    grid-template-areas:"strong center smart";
+    align-items:center;
+  }
+}
+
+h1{font-size:clamp(.95rem,2.3vmin,2rem);font-weight:900;letter-spacing:.5px;}
 
 /* scoreboard */
-.score{display:flex;gap:12px;width:min(94vw,440px);}
 .team{
-  flex:1;border-radius:18px;padding:11px 10px 10px;text-align:center;
-  background:rgba(255,255,255,.05);border:2px solid var(--c);
+  border-radius:clamp(16px,2.4vmin,34px);
+  padding:clamp(10px,2.2vmin,34px) clamp(8px,1.8vmin,26px);
+  text-align:center;
+  background:rgba(255,255,255,.05);
+  border:clamp(2px,.42vmin,6px) solid var(--c);
   transition:box-shadow .3s;
 }
-.team.lead{box-shadow:0 0 26px var(--glow);}
+.team.lead{box-shadow:0 0 clamp(26px,5vmin,80px) var(--glow);}
+/* Display-only, and never a click target: the score's scale(1.3) bump
+   animation expands it over the +1 button just below, so a second quick tap
+   was landing on the number and being swallowed. */
+.team .nm,.team .pts{pointer-events:none;}
 .team .nm{
-  font-size:.72rem;font-weight:900;letter-spacing:1.6px;
-  text-transform:uppercase;color:var(--c);
+  font-size:clamp(.72rem,2.1vmin,2rem);font-weight:900;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--c);
 }
 .team .pts{
-  font-size:clamp(2.3rem,11vw,3.2rem);font-weight:900;line-height:1.05;
+  font-size:clamp(2.4rem,15vmin,13rem);font-weight:900;line-height:1.02;
   font-variant-numeric:tabular-nums;color:var(--c);
 }
 .team .pts.bump{animation:bump .42s cubic-bezier(.34,1.56,.64,1);}
 @keyframes bump{0%{transform:scale(1);}40%{transform:scale(1.3);}100%{transform:scale(1);}}
-.team .row{display:flex;gap:6px;justify-content:center;margin-top:3px;}
+.team .row{
+  display:flex;gap:clamp(6px,1.2vmin,16px);
+  justify-content:center;margin-top:clamp(8px,1.6vmin,22px);
+}
 .plus{
-  font-family:inherit;font-weight:900;cursor:pointer;border:none;border-radius:30px;
-  padding:7px 22px;font-size:.95rem;background:var(--c);color:var(--ink);
-  transition:transform .08s;
+  font-family:inherit;font-weight:900;cursor:pointer;border:none;border-radius:999px;
+  padding:clamp(7px,1.5vmin,20px) clamp(20px,3.6vmin,54px);
+  font-size:clamp(.95rem,2.4vmin,2.2rem);
+  background:var(--c);color:var(--ink);transition:transform .08s;
 }
 .plus:active{transform:translateY(2px) scale(.96);}
 .minus{
-  font-family:inherit;font-weight:900;cursor:pointer;border-radius:30px;
-  padding:7px 13px;font-size:.9rem;background:transparent;
-  border:2px solid rgba(255,255,255,.18);color:#8ba0bf;transition:transform .08s;
+  font-family:inherit;font-weight:900;cursor:pointer;border-radius:999px;
+  padding:clamp(7px,1.5vmin,20px) clamp(13px,2.2vmin,30px);
+  font-size:clamp(.9rem,2.2vmin,2rem);
+  background:transparent;border:clamp(2px,.36vmin,5px) solid rgba(255,255,255,.18);
+  color:#8ba0bf;transition:transform .08s;
 }
 .minus:active{transform:translateY(2px) scale(.96);}
 #strong{--c:#f472b6;--glow:rgba(244,114,182,.5);--ink:#3b0a24;}
 #smart {--c:#f1f5f9;--glow:rgba(241,245,249,.38);--ink:#0f172a;}
 .zerobtn{
-  font-family:inherit;font-weight:800;cursor:pointer;font-size:.72rem;
-  background:transparent;border:1px solid rgba(255,255,255,.15);color:#7f93b4;
-  border-radius:30px;padding:5px 15px;
+  font-family:inherit;font-weight:800;cursor:pointer;
+  font-size:clamp(.7rem,1.45vmin,1.25rem);
+  padding:clamp(5px,1vmin,13px) clamp(15px,2.2vmin,30px);
+  background:transparent;border:1px solid rgba(255,255,255,.15);
+  color:#7f93b4;border-radius:999px;
 }
 .zerobtn:active{background:rgba(255,255,255,.07);}
 
 /* preset choice */
-.opts{display:flex;gap:10px;}
+.opts{display:flex;gap:clamp(8px,1.6vmin,20px);}
 .opt{
-  font-family:inherit;font-weight:900;font-size:1rem;cursor:pointer;
-  padding:11px 26px;border-radius:40px;color:#cfe0f5;
-  background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14);
+  font-family:inherit;font-weight:900;cursor:pointer;
+  font-size:clamp(.95rem,2.2vmin,2rem);
+  padding:clamp(10px,1.8vmin,22px) clamp(24px,3.6vmin,52px);
+  border-radius:999px;color:#cfe0f5;
+  background:rgba(255,255,255,.07);
+  border:clamp(2px,.36vmin,5px) solid rgba(255,255,255,.14);
   transition:transform .08s,background .15s,border-color .15s,color .15s;
 }
 .opt:active{transform:scale(.95);}
-.opt.sel{background:#0ea5e9;border-color:#7dd3fc;color:#fff;box-shadow:0 0 22px rgba(14,165,233,.45);}
+.opt.sel{background:#0ea5e9;border-color:#7dd3fc;color:#fff;box-shadow:0 0 clamp(22px,3.5vmin,52px) rgba(14,165,233,.45);}
 
 /* dial */
-.dial{position:relative;width:min(64vw,240px);aspect-ratio:1;}
+.dial{position:relative;width:clamp(200px,42vmin,560px);aspect-ratio:1;}
 .dial svg{width:100%;height:100%;transform:rotate(-90deg);}
-.track{fill:none;stroke:rgba(255,255,255,.09);stroke-width:14;}
-.prog{fill:none;stroke:#22c55e;stroke-width:14;stroke-linecap:round;
-      transition:stroke .3s;}
+.track{fill:none;stroke:rgba(255,255,255,.09);stroke-width:15;}
+.prog{fill:none;stroke:#22c55e;stroke-width:15;stroke-linecap:round;transition:stroke .3s;}
 .readout{
   position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:2px;
+  align-items:center;justify-content:center;gap:clamp(2px,.5vmin,8px);
 }
 #num{
-  font-size:clamp(3.4rem,17vw,5.6rem);font-weight:900;line-height:1;
+  font-size:clamp(3.2rem,17vmin,13rem);font-weight:900;line-height:1;
   font-variant-numeric:tabular-nums;transition:color .2s;
 }
 #num.warn{color:#f87171;}
 #num.pop{animation:pop .45s cubic-bezier(.34,1.56,.64,1);}
 @keyframes pop{0%{transform:scale(1);}35%{transform:scale(1.32);}100%{transform:scale(1);}}
-#sub{font-size:.78rem;color:#8ba0bf;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
-#sub.done{color:#f87171;letter-spacing:3px;}
+#sub{
+  font-size:clamp(.74rem,1.7vmin,1.6rem);color:#8ba0bf;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;
+}
+#sub.done{color:#f87171;letter-spacing:.24em;}
 
 /* controls */
-.ctrls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.ctrls{display:flex;gap:clamp(9px,1.7vmin,22px);flex-wrap:wrap;justify-content:center;}
 .btn{
-  font-family:inherit;font-weight:900;border:none;border-radius:40px;cursor:pointer;
-  padding:13px 34px;font-size:1.05rem;color:#fff;
-  background:#16a34a;box-shadow:0 5px 0 #14532d;transition:transform .08s,box-shadow .08s,opacity .15s;
+  font-family:inherit;font-weight:900;border:none;border-radius:999px;cursor:pointer;
+  padding:clamp(12px,2vmin,26px) clamp(30px,4.6vmin,68px);
+  font-size:clamp(1rem,2.4vmin,2.2rem);color:#fff;
+  background:#16a34a;box-shadow:0 clamp(5px,.9vmin,11px) 0 #14532d;
+  transition:transform .08s,box-shadow .08s,opacity .15s;
 }
 .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #14532d;}
-.btn.grey{background:#475569;box-shadow:0 5px 0 #27303f;}
+.btn.grey{background:#475569;box-shadow:0 clamp(5px,.9vmin,11px) 0 #27303f;}
 .btn.grey:active{box-shadow:0 1px 0 #27303f;}
 .btn:disabled{opacity:.35;cursor:not-allowed;}
 
-.hint{font-size:.72rem;color:#64748b;text-align:center;}
+.hint{font-size:clamp(.68rem,1.35vmin,1.15rem);color:#64748b;text-align:center;}
 </style>
 </head>
 <body>
 
-<div class="score">
+<div class="stage">
+
   <div class="team" id="strong">
     <div class="nm">Team Strong</div>
     <div class="pts" id="pStrong">0</div>
@@ -120,6 +167,31 @@ h1{font-size:clamp(1rem,3.4vw,1.25rem);font-weight:900;letter-spacing:.5px;}
       <button class="minus" data-t="strong" data-d="-1">−</button>
     </div>
   </div>
+
+  <div class="center">
+    <h1>⏱️ Countdown Timer</h1>
+    <div class="opts">
+      <button class="opt sel" id="o30" data-sec="30">30 sec</button>
+      <button class="opt"     id="o60" data-sec="60">60 sec</button>
+    </div>
+    <div class="dial">
+      <svg viewBox="0 0 220 220">
+        <circle class="track" cx="110" cy="110" r="96"></circle>
+        <circle class="prog"  cx="110" cy="110" r="96" id="ring"></circle>
+      </svg>
+      <div class="readout">
+        <div id="num">30</div>
+        <div id="sub">seconds</div>
+      </div>
+    </div>
+    <div class="ctrls">
+      <button class="btn" id="go">▶ Start</button>
+      <button class="btn grey" id="rst">↺ Reset</button>
+    </div>
+    <button class="zerobtn" id="zero">↺ 重置比分 Reset scores</button>
+    <div class="hint">Beeps for the final 5 seconds · Space = start/pause · R = reset</div>
+  </div>
+
   <div class="team" id="smart">
     <div class="nm">Team Smart</div>
     <div class="pts" id="pSmart">0</div>
@@ -128,33 +200,8 @@ h1{font-size:clamp(1rem,3.4vw,1.25rem);font-weight:900;letter-spacing:.5px;}
       <button class="minus" data-t="smart" data-d="-1">−</button>
     </div>
   </div>
+
 </div>
-<button class="zerobtn" id="zero">↺ 重置比分 Reset scores</button>
-
-<h1>⏱️ Countdown Timer</h1>
-
-<div class="opts">
-  <button class="opt sel" id="o30" data-sec="30">30 sec</button>
-  <button class="opt"     id="o60" data-sec="60">60 sec</button>
-</div>
-
-<div class="dial">
-  <svg viewBox="0 0 220 220">
-    <circle class="track" cx="110" cy="110" r="96"></circle>
-    <circle class="prog"  cx="110" cy="110" r="96" id="ring"></circle>
-  </svg>
-  <div class="readout">
-    <div id="num">30</div>
-    <div id="sub">seconds</div>
-  </div>
-</div>
-
-<div class="ctrls">
-  <button class="btn" id="go">▶ Start</button>
-  <button class="btn grey" id="rst">↺ Reset</button>
-</div>
-
-<div class="hint">Beeps for the final 5 seconds · Space = start/pause · R = reset</div>
 
 <script>
 'use strict';
