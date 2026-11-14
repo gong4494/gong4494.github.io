@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⏱️ Countdown Timer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:'Nunito',sans-serif;color:#e8eef8;
+  background:#0a0f1c;
+  background-image:
+    radial-gradient(800px 420px at 50% -8%, rgba(56,189,248,.18), transparent 62%),
+    radial-gradient(700px 420px at 50% 108%, rgba(16,185,129,.12), transparent 62%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;padding:20px;transition:background-color .25s;
+}
+body.warn{background-color:#2a0f14;}
+body.flash{animation:flashbg .55s ease-out 3;}
+@keyframes flashbg{0%,100%{background-color:#0a0f1c;}50%{background-color:#3b0a12;}}
+
+h1{font-size:clamp(1.1rem,4vw,1.5rem);font-weight:900;letter-spacing:.5px;}
+
+/* preset choice */
+.opts{display:flex;gap:10px;}
+.opt{
+  font-family:inherit;font-weight:900;font-size:1rem;cursor:pointer;
+  padding:11px 26px;border-radius:40px;color:#cfe0f5;
+  background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.14);
+  transition:transform .08s,background .15s,border-color .15s,color .15s;
+}
+.opt:active{transform:scale(.95);}
+.opt.sel{background:#0ea5e9;border-color:#7dd3fc;color:#fff;box-shadow:0 0 22px rgba(14,165,233,.45);}
+
+/* dial */
+.dial{position:relative;width:min(78vw,300px);aspect-ratio:1;}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg);}
+.track{fill:none;stroke:rgba(255,255,255,.09);stroke-width:14;}
+.prog{fill:none;stroke:#22c55e;stroke-width:14;stroke-linecap:round;
+      transition:stroke .3s;}
+.readout{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+}
+#num{
+  font-size:clamp(3.4rem,17vw,5.6rem);font-weight:900;line-height:1;
+  font-variant-numeric:tabular-nums;transition:color .2s;
+}
+#num.warn{color:#f87171;}
+#num.pop{animation:pop .45s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{0%{transform:scale(1);}35%{transform:scale(1.32);}100%{transform:scale(1);}}
+#sub{font-size:.78rem;color:#8ba0bf;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+#sub.done{color:#f87171;letter-spacing:3px;}
+
+/* controls */
+.ctrls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.btn{
+  font-family:inherit;font-weight:900;border:none;border-radius:40px;cursor:pointer;
+  padding:13px 34px;font-size:1.05rem;color:#fff;
+  background:#16a34a;box-shadow:0 5px 0 #14532d;transition:transform .08s,box-shadow .08s,opacity .15s;
+}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #14532d;}
+.btn.grey{background:#475569;box-shadow:0 5px 0 #27303f;}
+.btn.grey:active{box-shadow:0 1px 0 #27303f;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+
+.hint{font-size:.72rem;color:#64748b;text-align:center;}
+</style>
+</head>
+<body>
+
+<h1>⏱️ Countdown Timer</h1>
+
+<div class="opts">
+  <button class="opt sel" id="o30" data-sec="30">30 sec</button>
+  <button class="opt"     id="o60" data-sec="60">60 sec</button>
+</div>
+
+<div class="dial">
+  <svg viewBox="0 0 220 220">
+    <circle class="track" cx="110" cy="110" r="96"></circle>
+    <circle class="prog"  cx="110" cy="110" r="96" id="ring"></circle>
+  </svg>
+  <div class="readout">
+    <div id="num">30</div>
+    <div id="sub">seconds</div>
+  </div>
+</div>
+
+<div class="ctrls">
+  <button class="btn" id="go">▶ Start</button>
+  <button class="btn grey" id="rst">↺ Reset</button>
+</div>
+
+<div class="hint">Beeps for the final 5 seconds · Space = start/pause · R = reset</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const ring = $('ring'), num = $('num'), sub = $('sub');
+const CIRC = 2 * Math.PI * 96;
+ring.style.strokeDasharray = CIRC;
+
+let duration = 30;      // chosen preset, seconds
+let remain   = 30;      // seconds left (authoritative when paused)
+let endAt    = 0;       // wall-clock deadline while running
+let running  = false;
+let finished = false;
+let lastBeep = null;    // last whole second we beeped on, so we never double-beep
+
+// ── sound ──────────────────────────────────────────────────
+let ac = null;
+function audio(){
+  if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function beep(freq, dur, vol, type){
+  try{
+    const c = audio();
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    const t = c.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + .01);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + .02);
+  }catch(e){}
+}
+const tick  = n => beep(n === 1 ? 1050 : 760, .16, .22);     // last 5s, higher on the final one
+const buzz  = () => [0, .22, .44].forEach((d, i) =>
+                setTimeout(() => beep(i === 2 ? 520 : 680, .34, .26, 'sawtooth'), d * 1000));
+
+// ── render ─────────────────────────────────────────────────
+function paint(secsLeft){
+  const shown = Math.max(0, Math.ceil(secsLeft - 1e-6));
+  if (num.textContent !== String(shown)) num.textContent = shown;
+
+  const frac = duration ? Math.max(0, secsLeft) / duration : 0;
+  ring.style.strokeDashoffset = CIRC * (1 - frac);
+
+  const warn = secsLeft <= 5 + 1e-6 && secsLeft > 0;
+  ring.style.stroke = finished ? '#ef4444'
+                    : warn     ? '#ef4444'
+                    : secsLeft <= 10 ? '#f59e0b' : '#22c55e';
+  num.classList.toggle('warn', warn || finished);
+  document.body.classList.toggle('warn', warn);
+}
+
+function setSub(txt, done){
+  sub.textContent = txt;
+  sub.classList.toggle('done', !!done);
+}
+
+// ── loop ───────────────────────────────────────────────────
+function frame(){
+  if (running){
+    // Derive from a wall-clock deadline rather than counting down a variable:
+    // intervals drift and background tabs throttle them, which would desync
+    // both the digits and the final-5 beeps.
+    const left = (endAt - Date.now()) / 1000;
+    remain = Math.max(0, left);
+    paint(remain);                       // repaint first...
+
+    const whole = Math.ceil(remain - 1e-6);
+    if (remain > 0 && whole <= 5 && whole !== lastBeep){
+      lastBeep = whole;
+      tick(whole);                       // ...so the beep lands on the number shown
+      num.classList.remove('pop'); void num.offsetWidth; num.classList.add('pop');
+    }
+    if (remain <= 0) finish();
+  } else {
+    paint(remain);
+  }
+  requestAnimationFrame(frame);
+}
+
+function finish(){
+  running = false; finished = true; remain = 0;
+  lastBeep = null;
+  buzz();
+  $('go').textContent = '▶ Start';
+  $('go').disabled = true;
+  setSub("time's up!", true);
+  document.body.classList.remove('warn');
+  document.body.classList.add('flash');
+  setTimeout(() => document.body.classList.remove('flash'), 1800);
+}
+
+function start(){
+  if (running || remain <= 0) return;
+  audio();                       // the click is the gesture that unlocks audio
+  finished = false;
+  running = true;
+  endAt = Date.now() + remain * 1000;
+  // lastBeep deliberately survives pause/resume: the second we are already
+  // inside has had its beep, and re-arming it here played it twice.
+  $('go').textContent = '⏸ Pause';
+  setSub('counting down');
+}
+function pause(){
+  if (!running) return;
+  remain = Math.max(0, (endAt - Date.now()) / 1000);
+  running = false;
+  $('go').textContent = '▶ Start';
+  setSub('paused');
+}
+function reset(){
+  running = false; finished = false;
+  remain = duration;
+  lastBeep = null;
+  $('go').textContent = '▶ Start';
+  $('go').disabled = false;
+  setSub('seconds');
+  document.body.classList.remove('warn', 'flash');
+  paint(remain);
+}
+function choose(sec){
+  duration = sec;
+  document.querySelectorAll('.opt').forEach(b => b.classList.toggle('sel', +b.dataset.sec === sec));
+  reset();
+}
+
+$('go').onclick  = () => running ? pause() : start();
+$('rst').onclick = reset;
+document.querySelectorAll('.opt').forEach(b => b.onclick = () => choose(+b.dataset.sec));
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space'){ e.preventDefault(); running ? pause() : start(); }
+  else if (e.key === 'r' || e.key === 'R'){ reset(); }
+});
+
+reset();
+requestAnimationFrame(frame);
+
+// test hook
+window.__t = { start, pause, reset, choose,
+               get remain(){ return remain; }, get running(){ return running; },
+               get finished(){ return finished; },
+               setRemain(s){ remain = s; if (running) endAt = Date.now() + s * 1000; } };
+</script>
+</body>
+</html>
