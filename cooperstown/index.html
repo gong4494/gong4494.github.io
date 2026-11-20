@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Send Will Gong to Cooperstown</title>
+<meta name="description" content="Help Will Gong, #17 for the Pioneers 12U White, play at the Cooperstown Dreams Park tournament.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0f2340;
+    --navy-2: #1b355c;
+    --red: #c8102e;
+    --cream: #faf6ee;
+    --ink: #1a1a1a;
+    --muted: #5b6573;
+    --card: #ffffff;
+    --line: #e4ddd0;
+    --gold: #e0a526;
+    --pool: #1f8fc4;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--cream); color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  a { color: var(--red); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  .hero .ph, footer .ph { color: var(--ink); }
+  .ph { background: #fff3c4; border-bottom: 2px dashed var(--gold); padding: 0 .2em; border-radius: 3px; }
+
+  nav { position: sticky; top: 0; z-index: 10; background: var(--navy); color: #fff; }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 56px; }
+  nav .brand { display: flex; align-items: center; gap: 10px; font-family: 'Barlow Condensed', Inter, sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; font-size: 1.05rem; }
+  nav .links { display: flex; gap: 18px; font-size: .92rem; }
+  nav .links a { color: #dfe6f1; text-decoration: none; }
+  nav .links a:hover { color: #fff; }
+  .btn {
+    display: inline-block; background: var(--red); color: #fff; text-decoration: none;
+    font-weight: 800; padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer;
+    box-shadow: 0 3px 0 #8d0b20; transition: transform .1s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.small { padding: 8px 16px; font-size: .9rem; }
+  .btn.ghost { background: transparent; color: var(--navy); box-shadow: inset 0 0 0 2px var(--navy); }
+
+  header.hero {
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(160deg, #0b1a30 0%, var(--navy-2) 100%);
+    color: #fff; padding: 56px 0 80px; position: relative; overflow: hidden;
+  }
+  .hero-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; align-items: center; position: relative; z-index: 1; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .18em; font-size: .8rem; color: #ffc9d2; font-weight: 600; }
+  h1 { font-family: 'Barlow Condensed', Inter, sans-serif; font-weight: 800; text-transform: uppercase; font-style: italic; font-size: clamp(2.8rem, 9vw, 5rem); line-height: .95; letter-spacing: -.01em; margin: 10px 0 14px; }
+  h1 span { color: transparent; -webkit-text-stroke: 2px #fff; }
+  .hero p.lead { font-size: 1.15rem; max-width: 560px; color: #dfe6f1; }
+  .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+  .hero .cta .ghost { color: #fff; box-shadow: inset 0 0 0 2px #fff; }
+
+  /* Player panel */
+  .badge { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--red); color: #fff; font-size: 1rem; font-style: italic; }
+  .panel {
+    position: relative; aspect-ratio: 4 / 5; width: 100%; max-width: 360px; justify-self: end;
+    border-radius: 24px; overflow: hidden; isolation: isolate;
+    background: linear-gradient(155deg, #c8102e 0%, #7a0a1d 55%, #0b1a30 100%);
+    background-size: cover; background-position: center 35%;
+    box-shadow: 0 30px 60px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+  .panel .big {
+    position: absolute; right: 2%; top: -6%; z-index: -1;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic;
+    font-size: 15rem; line-height: 1; color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,.35);
+  }
+  .panel .info {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 24px;
+    background: linear-gradient(transparent, rgba(5,12,24,.85));
+  }
+  .panel .pname { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 2.4rem; line-height: .95; }
+  .panel .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .panel .meta span { font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.14); backdrop-filter: blur(6px); }
+  .panel .cam { position: absolute; top: 18px; left: 18px; display: flex; align-items: center; gap: 6px; font-size: .75rem; color: rgba(255,255,255,.75); }
+  .ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  .progress-card {
+    background: var(--card); border-radius: 16px; padding: 24px; margin-top: -48px; position: relative; z-index: 2;
+    box-shadow: 0 10px 30px rgba(15,35,64,.15); border: 1px solid var(--line);
+  }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+  .raised { font-size: 2rem; font-weight: 800; color: var(--navy); }
+  .raised small { font-size: 1rem; color: var(--muted); font-weight: 600; }
+  .bar { height: 18px; background: #ece6da; border-radius: 999px; overflow: hidden; margin: 12px 0 10px; }
+  .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--red), #e8455f); border-radius: 999px; transition: width 1.2s ease; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; margin-top: 14px; }
+  .stats b { display: block; font-size: 1.4rem; color: var(--navy); }
+  .stats span { font-size: .85rem; color: var(--muted); }
+  .updated { font-size: .8rem; color: var(--muted); margin-top: 10px; }
+
+  section { padding: 64px 0 8px; }
+  h2 { font-family: 'Barlow Condensed', Inter, sans-serif; font-weight: 800; text-transform: uppercase; color: var(--navy); font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1; letter-spacing: -.01em; margin: 0 0 12px; }
+  h3 { color: var(--navy); }
+  .sub { color: var(--muted); margin: 0 0 24px; max-width: 640px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: center; }
+  .photo {
+    aspect-ratio: 4/5; border-radius: 16px; background: repeating-linear-gradient(45deg, #e9e2d3, #e9e2d3 12px, #f2ecdf 12px, #f2ecdf 24px);
+    display: grid; place-items: center; color: var(--muted); text-align: center; border: 2px dashed #cfc5b2; padding: 16px;
+    background-size: cover; background-position: center;
+  }
+
+  .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .gallery img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: center 30%; border-radius: 16px; display: block; box-shadow: 0 6px 18px rgba(15,35,64,.12); }
+  .gallery img.wide { grid-column: 1 / -1; aspect-ratio: 4 / 3; object-position: center; }
+  /* Baseball card */
+  .bcard { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 6px 18px rgba(15,35,64,.08); }
+  .bcard .top { background: var(--navy); color: #fff; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .bcard .top b { font-family: 'Barlow Condensed', Inter, sans-serif; font-weight: 800; text-transform: uppercase; font-size: 1.2rem; letter-spacing: .05em; }
+  .bcard .top span { font-family: 'Barlow Condensed', Inter, sans-serif; font-weight: 800; text-transform: uppercase; font-size: 1.6rem; color: #ff8fa1; }
+  .bcard dl { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin: 0; padding: 18px 20px; }
+  .bcard dt { color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; padding-top: 2px; }
+  .bcard dd { margin: 0; font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px 20px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: #f3eee3; border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: .9rem; color: var(--navy); }
+  .chip.swim { background: #e2f2fa; color: #0f5f86; }
+
+  .budget { list-style: none; padding: 0; margin: 0; }
+  .budget li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+  .budget li b { color: var(--navy); white-space: nowrap; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+  .card h3 { margin: 0; font-size: 1.1rem; }
+  .card .handle { font-weight: 800; font-size: 1.05rem; word-break: break-word; }
+  .card .btn { margin-top: auto; text-align: center; }
+  .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--navy); color: #fff; }
+  .icon.red { background: var(--red); }
+
+  .tier { position: relative; overflow: hidden; }
+  .tier .price { font-size: 1.8rem; font-weight: 800; color: var(--red); }
+  .tier p { margin: 0 0 8px; color: var(--muted); font-size: .95rem; }
+  .tier.featured { border: 2px solid var(--red); }
+  .tier .tag { position: absolute; top: 12px; right: -34px; transform: rotate(45deg); background: var(--red); color: #fff; font-size: .7rem; font-weight: 800; padding: 3px 40px; letter-spacing: .05em; }
+
+  .thanks { display: flex; flex-wrap: wrap; gap: 10px; }
+  .thanks span { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 600; color: var(--navy); }
+
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-bottom: 10px; }
+  summary { font-weight: 600; cursor: pointer; color: var(--navy); }
+
+  footer { background: var(--navy); color: #dfe6f1; margin-top: 64px; padding: 40px 0; }
+  footer h2 { color: #fff; }
+  footer a { color: #ffc9d2; }
+  .fine { font-size: .8rem; color: #9fb0c8; margin-top: 24px; }
+
+  @media (max-width: 760px) {
+    nav .links { display: none; }
+    .grid-2, .hero-grid { grid-template-columns: 1fr; }
+    .panel { justify-self: center; max-width: 420px; }
+    header.hero { padding: 40px 0 72px; }
+    .stats b { font-size: 1.15rem; }
+    .photo { aspect-ratio: 4/3; }
+  }
+</style>
+</head>
+<body>
+
+<!--
+  ==========================================================
+  EDIT HERE: the numbers used across the page.
+  Search this file for class="ph" to find every placeholder.
+  ==========================================================
+-->
+<script>
+  const FUNDRAISER = {
+    goal: 2100,             // dollars Will needs for the trip
+    // Live numbers: paste the "Publish to web" CSV link of the sheet's Public tab here.
+    // When it's set, the total, donor count and thank-you wall update from the sheet by themselves.
+    sheetCsvUrl: "https://docs.google.com/spreadsheets/d/137cwgjC8rDSWpF8Z7ns8f_eWvmYxa_QuQzF5sB-Cc-M/gviz/tq?tqx=out:csv&headers=1&sheet=Public",
+    // Used only if sheetCsvUrl is empty or the sheet can't be loaded:
+    raised: 0,
+    donors: 0,
+    tripDate: "2027-08-19", // first day of the Cooperstown week (YYYY-MM-DD)
+    updated: "Nov 19, 2026"
+  };
+</script>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="badge">17</span>WILL GONG</div>
+    <div class="links">
+      <a href="#will">Meet Will</a>
+      <a href="#trip">The trip</a>
+      <a href="#donate">Donate</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <a class="btn small" href="#donate">Donate</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Road to Cooperstown · August 19–25, 2027</div>
+      <h1>Send Will Gong<br><span>to Cooperstown</span></h1>
+      <p class="lead">Will has been playing baseball since he was 5, and ever since, he's dreamed of playing at Cooperstown. This August, the 12-year-old second baseman and pitcher from Philadelphia has the chance to make that dream come true with the Pioneers 12U White. Help him get there!</p>
+      <div class="cta">
+        <a class="btn" href="#donate">Donate now</a>
+        <a class="btn ghost" href="#will">Meet Will</a>
+      </div>
+    </div>
+    <div class="panel" id="heroPanel" style="background-image:url('images/will-stadium-white.jpg');background-size:auto 150%;background-position:44% 62%" role="img" aria-label="Will in his white Pioneers #17 jersey at the ballpark">
+      <div class="info">
+        <div class="pname">Will Gong</div>
+        <div class="meta"><span>#17</span><span>2B · P</span><span>Philadelphia</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="progress-card" aria-label="Fundraising progress">
+    <div class="progress-top">
+      <div class="raised"><span id="raised">$0</span> <small>raised of <span id="goal">$0</span> goal</small></div>
+      <div><b id="pct">0%</b> <span style="color:var(--muted)">there</span></div>
+    </div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="barwrap"><div id="bar"></div></div>
+    <div class="stats">
+      <div><b id="donors">0</b><span>donors</span></div>
+      <div><b id="togo">$0</b><span>still to go</span></div>
+      <div><b id="days">–</b><span>days to Cooperstown</span></div>
+    </div>
+    <div class="updated">Last updated <span id="updated"></span></div>
+  </div>
+</div>
+
+<section id="will">
+  <div class="wrap grid-2">
+    <div>
+      <h2>Meet Will</h2>
+      <p>Will Gong is 12 years old, lives in Philadelphia, and loves pretty much every sport there is. On the diamond he plays <b>second base</b> and takes the mound as a <b>pitcher</b>, wearing <b>#17</b> for the Pioneers 12U White. When he isn't playing baseball, you'll probably find him in the pool. <b>Swimming</b> is his other big love.</p>
+      <p>Playing at Cooperstown is a dream for any young ballplayer, and Will has worked hard to get here. Your support will help cover his trip and make this a summer he'll never forget.</p>
+      <div class="bcard" style="margin-top:24px">
+        <div class="top"><b>WILL GONG</b><span>#17</span></div>
+        <dl>
+          <dt>Team</dt><dd>Pioneers 12U White</dd>
+          <dt>Positions</dt><dd>Second base · Pitcher</dd>
+          <dt>Age</dt><dd>12</dd>
+          <dt>Hometown</dt><dd>Philadelphia, PA</dd>
+        </dl>
+        <div class="chips">
+          <span class="chip"><svg class="ico" style="width:16px;height:16px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M6.5 5.5c2 2 2 11 0 13M17.5 5.5c-2 2-2 11 0 13"/></svg>Baseball</span>
+          <span class="chip swim"><svg class="ico" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M2 16c2 0 2-1.5 4-1.5S8 16 10 16s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 20c2 0 2-1.5 4-1.5S8 20 10 20s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><circle cx="15" cy="6" r="2"/><path d="M6 12l4-5 4 3"/></svg>Swimming</span>
+          <span class="chip"><svg class="ico" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>Loves all sports</span>
+        </div>
+      </div>
+    </div>
+    <div class="gallery">
+      <img src="images/will-red-jersey.jpg" alt="Will in his red Pioneers #17 jersey" loading="lazy">
+      <img src="images/will-glove.jpg" alt="Will in his navy jersey with his glove" loading="lazy">
+      <img class="wide" src="images/will-stadium-navy.jpg" alt="Will at the ballpark in his navy #17 jersey" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section id="trip">
+  <div class="wrap grid-2">
+    <div>
+      <h2>The trip</h2>
+      <p>Every summer, teams of 12-and-under players from across the country spend a week in Cooperstown, New York, just down the road from the National Baseball Hall of Fame. Players live together in the player barracks, trade pins with kids from every state, and play games on fields built for this one week of their childhood.</p>
+      <p>Will's team plays <b>August 19–25, 2027</b>.</p>
+    </div>
+    <div>
+      <h3 style="margin-top:0">Where the money goes</h3>
+      <p class="sub" style="margin-bottom:8px">Will's share of the trip.</p>
+      <ul class="budget">
+        <li><span>Tournament fee &amp; barracks (player housing at Dreams Park)</span><b>$1,295</b></li>
+        <li><span>Will's share of team costs</span><b>$805</b></li>
+        <li><span><b>Total goal</b></span><b>$2,100</b></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="donate">
+  <div class="wrap">
+    <h2>Help Will get there</h2>
+    <p class="sub">Every gift counts, big or small. Please add <b>"Will Cooperstown"</b> in the payment note so we can say thank you.</p>
+    <div class="cards">
+      <div class="card tier">
+        <h3>Single</h3>
+        <div class="price">$17</div>
+        <p>One for every number on Will's jersey.</p>
+        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=17" target="_blank" rel="noopener">Venmo $17</a>
+      </div>
+      <div class="card tier">
+        <h3>Double play</h3>
+        <div class="price">$50</div>
+        <p>Covers a set of trading pins to swap with other teams.</p>
+        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=50" target="_blank" rel="noopener">Venmo $50</a>
+      </div>
+      <div class="card tier">
+        <h3>Home run</h3>
+        <div class="price">$100</div>
+        <p>Helps cover Will's share of team costs.</p>
+        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=100" target="_blank" rel="noopener">Venmo $100</a>
+      </div>
+      <div class="card tier">
+        <h3>Grand slam</h3>
+        <div class="price">$250+</div>
+        <p>A big piece of the tournament and barracks fee. Thank you!</p>
+        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=250" target="_blank" rel="noopener">Venmo $250</a>
+      </div>
+    </div>
+
+    <p style="color:var(--muted);font-size:.9rem;margin:14px 0 0">Each button opens Venmo with the amount and the note "Will Cooperstown" already filled in. On a phone it opens the Venmo app. Want to give a different amount, or pay by card? See the options below.</p>
+    <h3 id="ways" style="margin:36px 0 12px">Ways to give</h3>
+    <div class="cards">
+      <div class="card">
+        <div class="icon red"><svg class="ico" viewBox="0 0 24 24"><path d="M20 7H5a2 2 0 0 1 0-4h13v4"/><path d="M3 5v14a2 2 0 0 0 2 2h15V7"/><circle cx="16" cy="14" r="1.2"/></svg></div>
+        <h3>Venmo</h3>
+        <div class="handle">@Ning_Gong_1</div>
+        <span style="color:var(--muted);font-size:.9rem">Will's parent's Venmo. Memo: "Will Cooperstown"</span>
+        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown" target="_blank" rel="noopener">Pay any amount</a>
+      </div>
+      <div class="card">
+        <div class="icon"><svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></div>
+        <h3>GoFundMe</h3>
+        <div class="handle">Donate by card online</div>
+        <a class="btn" href="https://gofund.me/fc1c476cf" target="_blank" rel="noopener">Go to GoFundMe</a>
+      </div>
+    </div>
+
+    <h3 style="margin:36px 0 12px">Thank you to Will's supporters</h3>
+    <div class="thanks" id="thanks"><span>Be the first to support Will!</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Questions</h2>
+    <details><summary>When and where is the tournament?</summary><p>Cooperstown Dreams Park, Cooperstown, NY, August 19–25, 2027.</p></details>
+    <details><summary>Is my donation tax-deductible?</summary><p>No. This is a private family fundraiser, not a registered charity, so donations are not tax-deductible.</p></details>
+    <details><summary>What if Will raises more than his goal?</summary><p>Anything beyond Will's goal goes to help a teammate who's still short of theirs.</p></details>
+    <details><summary>Can I follow along during the tournament?</summary><p>Yes! We'll post updates and photos from Cooperstown on Instagram at <a href="https://www.instagram.com/gong4494/" target="_blank" rel="noopener">@gong4494</a>.</p></details>
+  </div>
+</section>
+
+<footer id="contact">
+  <div class="wrap">
+    <h2>Get in touch</h2>
+    <p>Questions? Send us a message on Instagram at <a href="https://www.instagram.com/gong4494/" target="_blank" rel="noopener">@gong4494</a>.</p>
+    <a class="btn" href="#donate">Donate now</a>
+    <p class="fine">Will Gong · #17 · Pioneers 12U White · Not affiliated with or endorsed by Cooperstown Dreams Park or the National Baseball Hall of Fame.</p>
+  </div>
+</footer>
+
+<script>
+  const money = n => "$" + Math.round(n).toLocaleString("en-US");
+  const f = FUNDRAISER;
+
+  function render(raised, donors) {
+  const pct = Math.min(100, Math.round(raised / f.goal * 100));
+  document.getElementById("raised").textContent = money(raised);
+  document.getElementById("goal").textContent = money(f.goal);
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("donors").textContent = donors;
+  document.getElementById("togo").textContent = money(Math.max(0, f.goal - raised));
+  document.getElementById("updated").textContent = f.updated;
+  document.getElementById("barwrap").setAttribute("aria-valuenow", pct);
+  requestAnimationFrame(() => setTimeout(() => document.getElementById("bar").style.width = Math.max(pct, 1) + "%", 100));
+  }
+
+  // Minimal CSV parser (handles quoted fields with commas and quotes).
+  function parseCSV(text) {
+    const rows = []; let row = [], cur = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') q = false;
+        else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(cur); cur = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(cur); rows.push(row); row = []; cur = "";
+      } else cur += c;
+    }
+    if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  const esc = t => t.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+  function renderThanks(names, anon) {
+    const el = document.getElementById("thanks");
+    if (!names.length && !anon) return; // keep "Be the first" message
+    let html = names.map(n => `<span>${esc(n)}</span>`).join("");
+    if (anon) html += `<span>+ ${anon} anonymous supporter${anon > 1 ? "s" : ""}</span>`;
+    el.innerHTML = html;
+  }
+
+  render(f.raised, f.donors);
+
+  if (f.sheetCsvUrl) {
+    const url = f.sheetCsvUrl + (f.sheetCsvUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
+    fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(text => {
+      let raised = 0, donors = 0, anon = 0; const names = [];
+      parseCSV(text).slice(1).forEach(([name = "", amount = ""]) => {
+        const amt = parseFloat(String(amount).replace(/[$,\s]/g, ""));
+        if (!(amt > 0)) return;
+        raised += amt; donors++;
+        name = name.trim();
+        if (!name || name.toLowerCase() === "anonymous") anon++;
+        else if (!names.includes(name)) names.push(name);
+      });
+      render(raised, donors);
+      renderThanks(names, anon);
+      document.getElementById("updated").textContent = "just now (live from our tracker)";
+    }).catch(() => { /* sheet unavailable: keep the fallback numbers above */ });
+  }
+  const days = Math.ceil((new Date(f.tripDate + "T00:00:00") - new Date()) / 86400000);
+  document.getElementById("days").textContent = days > 0 ? days : 0;
+</script>
+</body>
+</html>
