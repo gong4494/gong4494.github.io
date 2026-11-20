@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>✖️ 乘法大冒险 Multiplication Quest</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:'Nunito',sans-serif;color:#15321f;
+  background:linear-gradient(170deg,#9be7ff 0%,#c8f0c0 52%,#fff6d8 100%);
+  min-height:100vh;padding:12px 12px 32px;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px;align-items:center;}
+
+h1{font-size:clamp(1.1rem,4.4vw,1.5rem);font-weight:900;color:#15502f;text-shadow:1px 1px 0 #fff;}
+
+/* HUD */
+.hud{display:flex;gap:8px;width:100%;}
+.pill{
+  flex:1;background:rgba(255,255,255,.75);border-radius:16px;padding:7px 6px;
+  text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.09);
+}
+.pill .k{font-size:.6rem;font-weight:900;color:#5d7a66;text-transform:uppercase;letter-spacing:1px;}
+.pill .v{font-size:1.15rem;font-weight:900;color:#15502f;}
+
+/* table picker */
+.tables{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+.tb{
+  font-family:inherit;font-weight:900;cursor:pointer;border:none;
+  border-radius:14px;padding:7px 13px;font-size:.9rem;
+  background:rgba(255,255,255,.72);color:#2a6b45;box-shadow:0 3px 0 rgba(0,0,0,.1);
+  transition:transform .08s;
+}
+.tb:active{transform:translateY(2px);}
+.tb.on{background:#2e9e5b;color:#fff;box-shadow:0 3px 0 #1c6b3c;}
+
+/* question */
+.card{
+  width:100%;background:#fff;border-radius:24px;padding:18px 16px;
+  box-shadow:0 7px 0 rgba(0,0,0,.1),0 12px 26px rgba(0,0,0,.12);
+  text-align:center;
+}
+.q{font-size:clamp(2.4rem,13vw,3.6rem);font-weight:900;color:#15502f;line-height:1.1;}
+.q .op{color:#e4692a;}
+.q .qm{color:#2e9e5b;}
+
+/* dot array */
+.arraywrap{margin-top:12px;display:none;}
+.arraywrap.on{display:block;animation:fade .25s ease-out;}
+@keyframes fade{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+.rows{display:flex;flex-direction:column;gap:4px;align-items:center;}
+.rowline{display:flex;gap:4px;}
+.dot{
+  width:clamp(9px,2.6vw,15px);aspect-ratio:1;border-radius:50%;
+  background:#e4692a;box-shadow:inset 0 -2px 0 rgba(0,0,0,.14);
+}
+.arraywrap .cap{font-size:.78rem;font-weight:800;color:#5d7a66;margin-top:7px;}
+
+/* answers */
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+.ans{
+  font-family:inherit;font-weight:900;cursor:pointer;border:none;
+  border-radius:20px;padding:clamp(14px,4.4vw,22px) 8px;
+  font-size:clamp(1.5rem,7vw,2.2rem);color:#fff;
+  box-shadow:0 6px 0 rgba(0,0,0,.22);
+  transition:transform .08s,box-shadow .08s,opacity .2s;
+}
+.ans:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.22);}
+.ans:nth-child(1){background:#f0683c;}
+.ans:nth-child(2){background:#3a9ad9;}
+.ans:nth-child(3){background:#8e5ec9;}
+.ans:nth-child(4){background:#2e9e5b;}
+.ans.right{background:#1f9d4d !important;animation:bounce .5s;}
+.ans.wrong{background:#9aa3ae !important;opacity:.6;}
+@keyframes bounce{0%,100%{transform:scale(1);}35%{transform:scale(1.14);}}
+.ans[disabled]{cursor:default;}
+
+.tools{display:flex;gap:8px;justify-content:center;}
+.btn{
+  font-family:inherit;font-weight:900;cursor:pointer;border:none;border-radius:30px;
+  padding:9px 20px;font-size:.9rem;color:#fff;background:#e8a21a;box-shadow:0 4px 0 #a06f00;
+  transition:transform .08s,box-shadow .08s;
+}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #a06f00;}
+.btn.green{background:#2e9e5b;box-shadow:0 4px 0 #1c6b3c;}
+.btn.green:active{box-shadow:0 1px 0 #1c6b3c;}
+
+.msg{min-height:30px;font-size:1rem;font-weight:900;text-align:center;}
+.msg.ok{color:#1f9d4d;}
+.msg.no{color:#d33b2d;}
+
+/* overlay */
+.ov{display:none;position:fixed;inset:0;z-index:40;background:rgba(10,40,20,.78);
+    align-items:center;justify-content:center;padding:18px;}
+.ov.on{display:flex;}
+.sheet{
+  background:#fff;border-radius:26px;padding:24px 20px;max-width:380px;width:100%;
+  text-align:center;animation:pop .32s cubic-bezier(.34,1.56,.64,1);
+  max-height:90vh;overflow-y:auto;
+}
+@keyframes pop{from{transform:scale(.65);opacity:0;}to{transform:scale(1);opacity:1;}}
+.sheet .big{font-size:3rem;}
+.sheet h2{font-size:1.4rem;font-weight:900;color:#15502f;margin:8px 0;}
+.sheet p{font-size:.95rem;color:#4a6253;line-height:1.6;margin-bottom:14px;}
+.stats{display:flex;gap:8px;margin-bottom:14px;}
+.stats div{flex:1;background:#f0f7f2;border-radius:14px;padding:9px 4px;}
+.stats .k{font-size:.6rem;font-weight:900;color:#5d7a66;text-transform:uppercase;}
+.stats .v{font-size:1.3rem;font-weight:900;color:#15502f;}
+.missed{text-align:left;background:#fff4f0;border-radius:14px;padding:11px 13px;margin-bottom:14px;}
+.missed h3{font-size:.85rem;color:#d33b2d;margin-bottom:6px;}
+.missed span{display:inline-block;background:#fff;border:2px solid #ffd3c4;border-radius:10px;
+             padding:3px 9px;margin:3px 3px 0 0;font-size:.85rem;font-weight:800;color:#a8341f;}
+
+.confetti{position:fixed;top:-20px;width:9px;height:13px;z-index:60;pointer-events:none;
+          animation:fall linear forwards;}
+@keyframes fall{to{transform:translateY(102vh) rotate(640deg);opacity:0;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>✖️ 乘法大冒险 Multiplication Quest</h1>
+
+  <div class="hud">
+    <div class="pill"><div class="k">得分 Score</div><div class="v" id="hScore">0</div></div>
+    <div class="pill"><div class="k">连对 Streak</div><div class="v" id="hStreak">0</div></div>
+    <div class="pill"><div class="k">生命 Lives</div><div class="v" id="hLives">❤️❤️❤️</div></div>
+  </div>
+
+  <div class="tables" id="tables"></div>
+
+  <div class="card">
+    <div class="q" id="q">— <span class="op">×</span> — <span class="qm">= ?</span></div>
+    <div class="arraywrap" id="arraywrap">
+      <div class="rows" id="rows"></div>
+      <div class="cap" id="cap"></div>
+    </div>
+  </div>
+
+  <div class="answers" id="answers"></div>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="tools">
+    <button class="btn" id="hint">💡 提示 Hint</button>
+    <button class="btn green" id="again">🔄 重新开始 Restart</button>
+  </div>
+</div>
+
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--){ const j = rnd(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+
+// ── state ──────────────────────────────────────────────────
+let table = 'mix';          // 'mix' or 2..9
+let score = 0, streak = 0, best = 0, lives = 3;
+let asked = 0, right = 0;
+let cur = null, locked = false;
+const missed = new Map();   // "6×7" -> times wrong
+
+// ── audio ──────────────────────────────────────────────────
+let ac = null;
+function tone(f, d, v, ty){
+  try{
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = ty || 'triangle'; o.frequency.value = f;
+    const t = ac.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(v, t + .01);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + d + .02);
+  }catch(e){}
+}
+const SFX = {
+  ok(){ [660, 880, 1170].forEach((f, i) => setTimeout(() => tone(f, .16, .13), i * 70)); },
+  no(){ [320, 240].forEach((f, i) => setTimeout(() => tone(f, .22, .13, 'sawtooth'), i * 130)); },
+  cheer(){ [523, 659, 784, 1047, 1318].forEach((f, i) => setTimeout(() => tone(f, .19, .14), i * 85)); },
+  over(){ [392, 330, 262].forEach((f, i) => setTimeout(() => tone(f, .3, .14, 'sawtooth'), i * 170)); },
+};
+
+function confetti(n){
+  const cols = ['#f0683c','#3a9ad9','#8e5ec9','#2e9e5b','#e8a21a','#ff7fb0'];
+  for (let i = 0; i < n; i++){
+    const d = document.createElement('div');
+    d.className = 'confetti';
+    d.style.left = rnd(0, 100) + 'vw';
+    d.style.background = cols[rnd(0, cols.length - 1)];
+    d.style.animationDuration = (1.1 + Math.random() * 1.5) + 's';
+    d.style.animationDelay = (Math.random() * .4) + 's';
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 3200);
+  }
+}
+
+// ── question building ──────────────────────────────────────
+function makeQuestion(){
+  let a, b;
+  if (table === 'mix'){ a = rnd(2, 9); b = rnd(2, 9); }
+  else { a = table; b = rnd(2, 9); }
+  // show the fact both ways round, so 3x7 and 7x3 both get practised
+  if (Math.random() < .5){ const t = a; a = b; b = t; }
+  return { a, b, ans: a * b, choices: makeChoices(a, b) };
+}
+
+// Wrong options are near-misses a child actually makes - one row too many,
+// one column short, adding instead of multiplying - not random numbers, which
+// would be eliminated on sight without doing any arithmetic.
+function makeChoices(a, b){
+  const ans = a * b;
+  // How far off a decoy may sit, scaled to the answer: a fixed window makes
+  // decoys for 2x3 absurd and decoys for 9x9 trivially wrong. a+b only ever
+  // fools anyone on small facts (5 next to 6), never on 18 next to 81.
+  const band = Math.max(6, Math.round(ans * 0.35));
+  const near = shuffle([
+    ans + a, ans - a, ans + b, ans - b,
+    (a + 1) * b, a * (b + 1), (a - 1) * b, a * (b - 1),
+    a + b, ans + 1, ans - 1, ans + 2, ans - 2,
+  ]);
+  const out = new Set([ans]);
+  for (const c of near){
+    if (out.size >= 4) break;
+    if (c > 0 && c !== ans && Math.abs(c - ans) <= band) out.add(c);
+  }
+  let guard = 0;
+  while (out.size < 4 && guard++ < 200){
+    const c = rnd(Math.max(2, ans - band), ans + band);
+    if (c > 0 && c !== ans) out.add(c);
+  }
+  return shuffle([...out]);
+}
+
+// ── render ─────────────────────────────────────────────────
+function hud(){
+  $('hScore').textContent = score;
+  $('hStreak').textContent = streak;
+  $('hLives').textContent = lives > 0 ? '❤️'.repeat(lives) : '💔';
+}
+
+function drawArray(a, b){
+  const rows = $('rows');
+  rows.innerHTML = '';
+  for (let i = 0; i < a; i++){
+    const line = document.createElement('div');
+    line.className = 'rowline';
+    for (let j = 0; j < b; j++){
+      const d = document.createElement('div');
+      d.className = 'dot';
+      line.appendChild(d);
+    }
+    rows.appendChild(line);
+  }
+  $('cap').textContent = `${a} 行 × ${b} 个 = ${a * b}`;
+}
+
+function showArray(on){ $('arraywrap').classList.toggle('on', !!on); }
+
+function nextQuestion(){
+  cur = makeQuestion();
+  locked = false;
+  showArray(false);
+  drawArray(cur.a, cur.b);
+  $('q').innerHTML = `${cur.a} <span class="op">×</span> ${cur.b} <span class="qm">= ?</span>`;
+  $('msg').textContent = '';
+  $('msg').className = 'msg';
+
+  const box = $('answers');
+  box.innerHTML = '';
+  cur.choices.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'ans';
+    b.textContent = c;
+    b.dataset.v = c;
+    b.onclick = () => answer(c, b);
+    box.appendChild(b);
+  });
+  hud();
+}
+
+function answer(val, btn){
+  if (locked) return;
+  locked = true;
+  asked++;
+  const correct = val === cur.ans;
+  const all = [...document.querySelectorAll('.ans')];
+  all.forEach(b => { b.disabled = true; });
+
+  if (correct){
+    right++; score += 10 + streak * 2; streak++;
+    best = Math.max(best, streak);
+    btn.classList.add('right');
+    $('msg').textContent = ['太棒了! ', '对了! ', '厉害! ', '真好! '][rnd(0,3)] + '🎉';
+    $('msg').className = 'msg ok';
+    SFX.ok();
+    if (streak > 0 && streak % 5 === 0){ confetti(60); SFX.cheer(); }
+    setTimeout(nextQuestion, 850);
+  } else {
+    streak = 0; lives--;
+    btn.classList.add('wrong');
+    all.forEach(b => { if (+b.dataset.v === cur.ans) b.classList.add('right'); });
+    const key = `${cur.a} × ${cur.b}`;
+    missed.set(key, (missed.get(key) || 0) + 1);
+    $('msg').innerHTML = `再想想~ <b>${cur.a} × ${cur.b} = ${cur.ans}</b>`;
+    $('msg').className = 'msg no';
+    showArray(true);                 // the array is the explanation
+    SFX.no();
+    hud();
+    if (lives <= 0){ setTimeout(gameOver, 1500); return; }
+    setTimeout(nextQuestion, 2200);
+  }
+  hud();
+}
+
+function gameOver(){
+  SFX.over();
+  const pct = asked ? Math.round(right / asked * 100) : 0;
+  let emoji = '🌟', title = '继续加油!';
+  if (pct >= 90){ emoji = '🏆'; title = '乘法大师!'; confetti(110); }
+  else if (pct >= 70){ emoji = '🎉'; title = '很棒!'; confetti(50); }
+  else if (pct >= 50){ emoji = '👍'; title = '不错!'; }
+
+  let missedHtml = '';
+  if (missed.size){
+    const list = [...missed.entries()].sort((x, y) => y[1] - x[1]).slice(0, 10);
+    missedHtml = `<div class="missed"><h3>再练练这几个 · Practise these</h3>` +
+      list.map(([k, n]) => {
+        const [a, b] = k.split(' × ').map(Number);
+        return `<span>${k} = ${a * b}${n > 1 ? ' ×' + n : ''}</span>`;
+      }).join('') + `</div>`;
+  }
+
+  $('sheet').innerHTML = `
+    <div class="big">${emoji}</div>
+    <h2>${title}</h2>
+    <div class="stats">
+      <div><div class="k">答对</div><div class="v">${right}/${asked}</div></div>
+      <div><div class="k">正确率</div><div class="v">${pct}%</div></div>
+      <div><div class="k">最长连对</div><div class="v">${best}</div></div>
+    </div>
+    <p>总得分 <b>${score}</b></p>
+    ${missedHtml}
+    <button class="btn green" onclick="restart()">🔄 再玩一次 Play again</button>`;
+  $('ov').classList.add('on');
+}
+
+function restart(){
+  score = 0; streak = 0; best = 0; lives = 3; asked = 0; right = 0;
+  missed.clear();
+  $('ov').classList.remove('on');
+  nextQuestion();
+}
+
+// ── table picker ───────────────────────────────────────────
+(function buildTables(){
+  const box = $('tables');
+  const opts = [['mix', '混合 Mix']];
+  for (let i = 2; i <= 9; i++) opts.push([i, i + '×']);
+  opts.forEach(([v, label]) => {
+    const b = document.createElement('button');
+    b.className = 'tb' + (v === table ? ' on' : '');
+    b.textContent = label;
+    b.dataset.t = v;
+    b.onclick = () => {
+      table = (v === 'mix') ? 'mix' : +v;
+      [...box.children].forEach(c => c.classList.toggle('on', c.dataset.t == String(v)));
+      restart();
+    };
+    box.appendChild(b);
+  });
+})();
+
+$('hint').onclick = () => { showArray(true); };
+$('again').onclick = restart;
+
+nextQuestion();
+
+window.__m = { makeQuestion, makeChoices, answer, restart,
+               get cur(){ return cur; }, get lives(){ return lives; },
+               get score(){ return score; }, get streak(){ return streak; },
+               setTable(t){ table = t; } };
+</script>
+</body>
+</html>
