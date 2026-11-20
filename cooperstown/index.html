@@ -198,7 +198,7 @@
       <a href="#donate">Donate</a>
       <a href="#contact">Contact</a>
     </div>
-    <a class="btn small" href="#donate">Donate</a>
+    <a class="venmo btn small" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown" target="_blank" rel="noopener">Donate</a>
   </div>
 </nav>
 
@@ -209,7 +209,7 @@
       <h1>Send Will Gong<br><span>to Cooperstown</span></h1>
       <p class="lead">Will has been playing baseball since he was 5, and ever since, he's dreamed of playing at Cooperstown. This August, the 12-year-old second baseman and pitcher from Philadelphia has the chance to make that dream come true with the Pioneers 12U White. Help him get there!</p>
       <div class="cta">
-        <a class="btn" href="#donate">Donate now</a>
+        <a class="venmo btn" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown" target="_blank" rel="noopener">Donate now</a>
         <a class="btn ghost" href="#will">Meet Will</a>
       </div>
     </div>
@@ -295,25 +295,25 @@
         <h3>Single</h3>
         <div class="price">$17</div>
         <p>One for every number on Will's jersey.</p>
-        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=17" target="_blank" rel="noopener">Venmo $17</a>
+        <a class="btn venmo" data-amount="17" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown&amp;amount=17" target="_blank" rel="noopener">Venmo $17</a>
       </div>
       <div class="card tier">
         <h3>Double play</h3>
         <div class="price">$50</div>
         <p>Covers a set of trading pins to swap with other teams.</p>
-        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=50" target="_blank" rel="noopener">Venmo $50</a>
+        <a class="btn venmo" data-amount="50" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown&amp;amount=50" target="_blank" rel="noopener">Venmo $50</a>
       </div>
       <div class="card tier">
         <h3>Home run</h3>
         <div class="price">$100</div>
         <p>Helps cover Will's share of team costs.</p>
-        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=100" target="_blank" rel="noopener">Venmo $100</a>
+        <a class="btn venmo" data-amount="100" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown&amp;amount=100" target="_blank" rel="noopener">Venmo $100</a>
       </div>
       <div class="card tier">
         <h3>Grand slam</h3>
         <div class="price">$250+</div>
         <p>A big piece of the tournament and barracks fee. Thank you!</p>
-        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown&amp;amount=250" target="_blank" rel="noopener">Venmo $250</a>
+        <a class="btn venmo" data-amount="250" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown&amp;amount=250" target="_blank" rel="noopener">Venmo $250</a>
       </div>
     </div>
 
@@ -325,7 +325,7 @@
         <h3>Venmo</h3>
         <div class="handle">@Ning_Gong_1</div>
         <span style="color:var(--muted);font-size:.9rem">Will's parent's Venmo. Memo: "Will Cooperstown"</span>
-        <a class="btn" href="https://venmo.com/Ning_Gong_1?txn=pay&amp;note=Will%20Cooperstown" target="_blank" rel="noopener">Pay any amount</a>
+        <a class="btn venmo" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown" target="_blank" rel="noopener">Pay any amount</a>
       </div>
       <div class="card">
         <div class="icon"><svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg></div>
@@ -354,7 +354,7 @@
   <div class="wrap">
     <h2>Get in touch</h2>
     <p>Questions? Send us a message on Instagram at <a href="https://www.instagram.com/gong4494/" target="_blank" rel="noopener">@gong4494</a>.</p>
-    <a class="btn" href="#donate">Donate now</a>
+    <a class="venmo btn" href="https://account.venmo.com/pay?txn=pay&amp;recipients=Ning_Gong_1&amp;note=Will%20Cooperstown" target="_blank" rel="noopener">Donate now</a>
     <p class="fine">Will Gong · #17 · Pioneers 12U White · Not affiliated with or endorsed by Cooperstown Dreams Park or the National Baseball Hall of Fame.</p>
   </div>
 </footer>
@@ -426,6 +426,27 @@
   }
   const days = Math.ceil((new Date(f.tripDate + "T00:00:00") - new Date()) / 86400000);
   document.getElementById("days").textContent = days > 0 ? days : 0;
+  // Venmo buttons: on phones, open the Venmo app directly (amount + note prefilled);
+  // if the app doesn't open (not installed / in-app browser), fall back to Venmo's website.
+  (function () {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    document.querySelectorAll("a.venmo").forEach(a => a.addEventListener("click", e => {
+      if (!isMobile) return; // computers: open the Venmo website in a new tab
+      e.preventDefault();
+      const amt = a.dataset.amount;
+      const app = "venmo://paycharge?txn=pay&recipients=Ning_Gong_1&note=" + encodeURIComponent("Will Cooperstown") + (amt ? "&amount=" + amt : "");
+      const web = a.href;
+      let left = false;
+      const onHide = () => { if (document.hidden) left = true; };
+      document.addEventListener("visibilitychange", onHide);
+      window.addEventListener("pagehide", onHide);
+      window.location.href = app;
+      setTimeout(() => {
+        document.removeEventListener("visibilitychange", onHide);
+        if (!left && !document.hidden) window.location.href = web;
+      }, 1500);
+    }));
+  })();
 </script>
 </body>
 </html>
