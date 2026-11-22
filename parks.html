@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🏞️ National Parks Map</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:'Nunito',sans-serif;color:#17351f;
+  background:linear-gradient(170deg,#dff0e2 0%,#dfeef7 55%,#fdf6e3 100%);
+  min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:1100px;margin:0 auto;}
+h1{font-size:clamp(1.3rem,4.6vw,2rem);font-weight:900;color:#1d5c34;text-align:center;}
+.sub{text-align:center;color:#55745f;font-size:.85rem;margin:4px 0 12px;}
+
+.bar{
+  display:flex;gap:9px;flex-wrap:wrap;align-items:center;justify-content:center;
+  margin-bottom:12px;
+}
+#search{
+  flex:1 1 220px;max-width:340px;padding:10px 16px;border-radius:30px;
+  border:2px solid #bcd9c6;font-family:inherit;font-size:.95rem;outline:none;
+  background:#fff;color:#17351f;
+}
+#search:focus{border-color:#2e9e5b;}
+.counter{
+  background:#2e9e5b;color:#fff;border-radius:30px;padding:9px 20px;
+  font-weight:900;font-size:.95rem;box-shadow:0 3px 0 #1c6b3c;
+}
+.mini{
+  font-family:inherit;font-weight:800;cursor:pointer;border:none;border-radius:30px;
+  padding:9px 16px;font-size:.82rem;background:#fff;color:#40684d;
+  box-shadow:0 3px 0 #c9ddd0;
+}
+.mini:active{transform:translateY(2px);box-shadow:0 1px 0 #c9ddd0;}
+
+.layout{display:grid;grid-template-columns:1fr;gap:12px;}
+@media(min-width:880px){.layout{grid-template-columns:1fr 310px;align-items:start;}}
+
+.mapcard{
+  background:#fff;border-radius:20px;padding:10px;
+  box-shadow:0 6px 0 rgba(0,0,0,.07),0 10px 24px rgba(0,0,0,.08);
+}
+svg{display:block;width:100%;height:auto;}
+.land{fill:#e8f3ea;stroke:#8fbfa0;stroke-width:1.6;stroke-linejoin:round;}
+.lake{fill:#cfe6f5;stroke:#9fc8e0;stroke-width:1;}
+.inset-box{fill:none;stroke:#c3d9ca;stroke-width:1.4;stroke-dasharray:5 4;}
+.inset-label{font:700 11px Nunito,sans-serif;fill:#7d9a88;}
+
+.pk{cursor:pointer;}
+.pk circle{fill:#e4692a;stroke:#fff;stroke-width:1.6;transition:r .12s,fill .15s;}
+.pk:hover circle{r:8;fill:#c2410c;}
+.pk.seen circle{fill:#2e9e5b;}
+.pk.sel circle{fill:#8e5ec9;stroke:#ffe066;stroke-width:3;}
+.pk.dim{opacity:.17;pointer-events:none;}
+
+.side{display:flex;flex-direction:column;gap:12px;}
+.panel{
+  background:#fff;border-radius:20px;padding:16px;
+  box-shadow:0 6px 0 rgba(0,0,0,.07),0 10px 24px rgba(0,0,0,.08);
+}
+.panel h2{font-size:1.15rem;font-weight:900;color:#1d5c34;line-height:1.25;}
+.meta{font-size:.8rem;color:#6b8a75;font-weight:800;margin:4px 0 9px;}
+.desc{font-size:.9rem;line-height:1.6;color:#3d5a48;margin-bottom:12px;}
+.seenbtn{
+  width:100%;font-family:inherit;font-weight:900;cursor:pointer;border:none;
+  border-radius:30px;padding:11px;font-size:.95rem;color:#fff;
+  background:#2e9e5b;box-shadow:0 4px 0 #1c6b3c;
+}
+.seenbtn.off{background:#9fb3a6;box-shadow:0 4px 0 #6f8579;}
+.seenbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #1c6b3c;}
+.empty{font-size:.9rem;color:#7d9a88;line-height:1.6;text-align:center;}
+
+.legend{display:flex;gap:14px;justify-content:center;font-size:.76rem;color:#55745f;font-weight:800;padding-top:4px;}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:4px;vertical-align:-1px;}
+
+.far{font-size:.8rem;color:#55745f;}
+.far h3{font-size:.82rem;color:#1d5c34;margin-bottom:6px;}
+.chip{
+  display:inline-block;background:#f0f7f2;border:2px solid #d4e8db;border-radius:12px;
+  padding:4px 10px;margin:3px 3px 0 0;font-size:.8rem;font-weight:800;
+  color:#2d5f40;cursor:pointer;
+}
+.chip.seen{background:#2e9e5b;color:#fff;border-color:#1c6b3c;}
+
+.tip{
+  position:fixed;pointer-events:none;z-index:50;display:none;
+  background:rgba(20,45,28,.94);color:#fff;border-radius:9px;
+  padding:5px 10px;font-size:.8rem;font-weight:800;white-space:nowrap;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏞️ National Parks Map</h1>
+  <div class="sub">All 63 U.S. National Parks · tap a dot to learn about it, and mark the ones you've been to</div>
+
+  <div class="bar">
+    <input id="search" type="text" placeholder="Search a park or state…" autocomplete="off">
+    <div class="counter" id="counter">0 / 63 visited</div>
+    <button class="mini" id="clear">Clear my list</button>
+  </div>
+
+  <div class="layout">
+    <div class="mapcard">
+      <svg id="map" viewBox="0 0 960 640" role="img" aria-label="Map of US national parks"></svg>
+      <div class="legend">
+        <span><i style="background:#e4692a"></i>Not yet</span>
+        <span><i style="background:#2e9e5b"></i>Been there</span>
+        <span><i style="background:#8e5ec9"></i>Selected</span>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel" id="info">
+        <div class="empty">👆 Tap any dot on the map<br>to see the park.</div>
+      </div>
+      <div class="panel far">
+        <h3>🌴 Way off the map</h3>
+        <div id="far"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+'use strict';
+
+/* ── Projection ───────────────────────────────────────────────
+   Equirectangular, with the x axis squeezed by cos(mid-latitude) so the
+   lower 48 keep roughly their true proportions. Outline and parks run
+   through the same function, so the dots always land where they should
+   relative to the coastline.                                            */
+const LON0 = -125, LON1 = -66.5, LAT0 = 49.6, LAT1 = 24.3;
+const MAPW = 940, MAPH = Math.round(MAPW * (LAT0 - LAT1) / ((LON1 - LON0) * Math.cos(37 * Math.PI / 180)));
+const OX = 10, OY = 8;
+function proj(lat, lon){
+  return [OX + (lon - LON0) / (LON1 - LON0) * MAPW,
+          OY + (LAT0 - lat) / (LAT0 - LAT1) * MAPH];
+}
+
+// Continental outline, clockwise from the Canadian border in the north-west.
+const US = [
+[49.0,-123.1],[49.0,-95.2],[48.6,-93.4],[48.2,-91.6],[47.9,-90.0],
+// Lake Superior's south shore is the edge of the land, not the border line
+[47.0,-91.5],[46.8,-92.1],[46.6,-90.9],[46.9,-90.7],[46.6,-89.5],[46.9,-88.5],
+[46.5,-87.9],[46.5,-86.0],[46.5,-84.9],
+// down Michigan's east coast, around Saginaw Bay, to Port Huron
+[46.0,-84.1],[45.4,-84.0],[45.0,-83.3],[44.3,-83.3],[43.9,-83.6],[44.0,-83.0],
+[43.4,-82.5],[43.0,-82.4],[42.6,-82.5],[42.0,-83.2],[41.7,-83.5],
+// Lake Erie's south shore, then Lake Ontario's, then the St Lawrence
+[41.5,-82.0],[41.4,-81.7],[42.0,-80.3],[42.5,-79.5],[43.1,-79.1],
+[43.3,-77.6],[43.4,-76.5],[44.1,-76.4],[44.5,-75.5],[45.0,-74.7],
+[45.0,-71.5],[45.3,-71.1],[47.4,-69.2],[47.1,-67.8],[45.2,-67.4],[44.8,-67.0],
+[44.5,-68.2],[43.8,-69.8],[42.9,-70.8],[42.3,-70.9],[41.7,-70.0],[41.3,-71.9],
+[41.1,-73.0],[40.6,-74.0],[39.5,-74.4],[38.8,-75.1],[38.0,-75.2],[37.0,-75.9],
+[36.9,-76.3],[35.9,-75.6],[35.2,-75.5],[34.6,-76.6],[33.9,-78.0],[32.8,-79.9],
+[32.0,-80.8],[31.1,-81.4],[30.4,-81.4],[29.0,-80.9],[27.8,-80.4],[26.5,-80.0],
+[25.4,-80.2],[25.1,-80.9],[25.8,-81.1],[26.7,-82.1],[27.8,-82.6],[28.9,-82.7],
+[29.7,-83.4],[30.1,-84.3],[30.0,-85.5],[30.4,-87.2],[30.2,-88.0],[29.3,-89.4],
+[29.0,-90.2],[29.6,-91.5],[29.5,-92.3],[29.7,-93.8],[29.4,-94.7],[28.4,-96.4],
+[27.8,-97.1],[26.1,-97.2],[25.9,-97.4],[26.4,-99.0],[27.7,-99.9],[29.3,-100.8],
+[29.8,-101.4],[29.2,-102.4],[29.5,-104.4],[30.6,-104.7],[31.4,-106.3],[31.8,-106.5],
+[31.8,-108.2],[31.3,-108.2],[31.3,-111.1],[32.5,-114.8],[32.7,-114.7],[32.5,-117.1],
+[33.3,-117.5],[34.0,-118.5],[34.5,-120.6],[35.6,-121.1],[36.6,-121.9],[37.8,-122.5],
+[38.3,-123.1],[39.8,-123.8],[40.4,-124.4],[41.7,-124.2],[42.8,-124.6],[44.0,-124.1],
+[45.5,-124.0],[46.3,-124.1],[47.3,-124.4],[48.4,-124.7],[48.1,-123.1],
+];
+
+// Each lake traced along the same shoreline the outline uses, so they sit in
+// their notches instead of floating over the border.
+const LAKES = [
+ // Superior
+ [[46.8,-92.1],[47.9,-90.0],[48.6,-88.3],[48.2,-85.9],[46.9,-84.6],[46.5,-84.9],
+  [46.5,-86.0],[46.5,-87.9],[46.9,-88.5],[46.6,-89.5],[46.9,-90.7],[46.6,-90.9]],
+ // Michigan — entirely inside the country, so it reads as a hole in the land
+ [[45.8,-85.0],[45.0,-85.4],[44.0,-86.2],[43.0,-86.2],[42.1,-86.4],[41.7,-87.5],
+  [42.5,-87.8],[43.5,-87.7],[44.5,-87.5],[45.2,-87.0],[45.7,-86.4],[45.9,-85.6]],
+ // Huron
+ [[46.0,-84.1],[46.3,-83.0],[45.5,-81.6],[44.5,-80.1],[43.5,-81.8],[43.0,-82.4],
+  [43.4,-82.5],[44.0,-83.0],[43.9,-83.6],[44.3,-83.3],[45.0,-83.3],[45.4,-84.0]],
+ // Erie
+ [[41.7,-83.5],[42.3,-83.1],[42.9,-80.5],[42.9,-79.2],[42.5,-79.5],[42.0,-80.3],
+  [41.4,-81.7],[41.5,-82.0]],
+ // Ontario
+ [[43.1,-79.1],[43.9,-78.5],[44.2,-76.6],[44.1,-76.4],[43.4,-76.5],[43.3,-77.6]],
+];
+
+/* Alaska and Hawaii get their own insets — at true scale Alaska would be
+   wider than the lower 48 and Hawaii a speck 2,000 miles offshore. */
+const AK_BOX = {x: 16, y: 392, w: 300, h: 230};
+const AK_LON0 = -169, AK_LON1 = -129, AK_LAT0 = 72, AK_LAT1 = 53.5;
+function projAK(lat, lon){
+  return [AK_BOX.x + (lon - AK_LON0) / (AK_LON1 - AK_LON0) * AK_BOX.w,
+          AK_BOX.y + (AK_LAT0 - lat) / (AK_LAT0 - AK_LAT1) * AK_BOX.h];
+}
+const AK = [
+[71.3,-156.8],[70.9,-152.0],[70.2,-147.0],[69.6,-141.0],[60.3,-141.0],[59.8,-135.9],
+[58.4,-134.6],[56.6,-132.5],[54.9,-130.9],[55.9,-133.8],[57.5,-136.0],[59.2,-139.5],
+[60.0,-144.5],[60.5,-148.0],[59.4,-151.9],[60.2,-152.9],[59.2,-154.2],[58.0,-157.5],
+[56.3,-159.5],[54.9,-163.4],[56.0,-161.0],[57.5,-157.5],[58.8,-157.0],[59.8,-158.6],
+[58.7,-161.8],[60.3,-165.3],[61.5,-166.2],[62.8,-164.5],[63.5,-162.0],[64.6,-161.2],
+[64.4,-165.5],[65.6,-168.1],[66.6,-164.0],[68.0,-166.3],[69.7,-163.0],[70.6,-159.9],
+];
+const HI_BOX = {x: 340, y: 520, w: 190, h: 100};
+const HI_LON0 = -160.6, HI_LON1 = -154.5, HI_LAT0 = 22.5, HI_LAT1 = 18.7;
+function projHI(lat, lon){
+  return [HI_BOX.x + (lon - HI_LON0) / (HI_LON1 - HI_LON0) * HI_BOX.w,
+          HI_BOX.y + (HI_LAT0 - lat) / (HI_LAT0 - HI_LAT1) * HI_BOX.h];
+}
+const HI_ISLES = [
+  [22.05,-159.5,13,8],[21.45,-158.0,11,7],[21.1,-156.6,13,6],
+  [20.8,-156.3,10,9],[19.6,-155.5,19,15],
+];
+
+// ── Parks ───────────────────────────────────────────────────
+// n name · s state · y year established as a national park · r region
+const PARKS = [
+ {n:'Acadia',s:'Maine',y:1919,lat:44.35,lon:-68.21,d:'Granite coast, Cadillac Mountain, and the first sunrise in the country.'},
+ {n:'Arches',s:'Utah',y:1971,lat:38.73,lon:-109.59,d:'Over 2,000 natural stone arches, including Delicate Arch.'},
+ {n:'Badlands',s:'South Dakota',y:1978,lat:43.86,lon:-102.34,d:'Striped rock spires and the largest mixed-grass prairie in the parks.'},
+ {n:'Big Bend',s:'Texas',y:1944,lat:29.25,lon:-103.25,d:'A huge bend in the Rio Grande, desert, mountains and famously dark skies.'},
+ {n:'Biscayne',s:'Florida',y:1980,lat:25.49,lon:-80.21,d:'Almost entirely underwater — coral reefs, mangroves and shipwrecks.'},
+ {n:'Black Canyon of the Gunnison',s:'Colorado',y:1999,lat:38.58,lon:-107.74,d:'A canyon so steep and narrow parts of it get only minutes of sun a day.'},
+ {n:'Bryce Canyon',s:'Utah',y:1928,lat:37.59,lon:-112.19,d:'Thousands of orange rock spires called hoodoos.'},
+ {n:'Canyonlands',s:'Utah',y:1964,lat:38.33,lon:-109.86,d:'Carved into districts by the Green and Colorado rivers.'},
+ {n:'Capitol Reef',s:'Utah',y:1971,lat:38.37,lon:-111.26,d:'A 100-mile wrinkle in the earth, plus old orchards you can pick fruit in.'},
+ {n:'Carlsbad Caverns',s:'New Mexico',y:1930,lat:32.18,lon:-104.44,d:'A huge underground chamber, and bats that pour out at dusk.'},
+ {n:'Channel Islands',isle:1,s:'California',y:1980,lat:34.01,lon:-119.42,d:'Five islands with animals found nowhere else on earth.'},
+ {n:'Congaree',s:'South Carolina',y:2003,lat:33.78,lon:-80.78,d:'One of the tallest hardwood forests left anywhere.'},
+ {n:'Crater Lake',s:'Oregon',y:1902,lat:42.94,lon:-122.11,d:'The deepest lake in the US, sitting inside a collapsed volcano.'},
+ {n:'Cuyahoga Valley',s:'Ohio',y:2000,lat:41.26,lon:-81.57,d:'Waterfalls, a winding river and an old canal towpath.'},
+ {n:'Death Valley',s:'California',y:1994,lat:36.51,lon:-117.08,d:'The hottest and driest park, and the lowest point in North America.'},
+ {n:'Dry Tortugas',isle:1,s:'Florida',y:1992,lat:24.63,lon:-82.87,d:'A giant brick fort on a tiny island, reachable only by boat or seaplane.'},
+ {n:'Everglades',s:'Florida',y:1947,lat:25.29,lon:-80.90,d:'A slow river of grass, with alligators and crocodiles together.'},
+ {n:'Gateway Arch',s:'Missouri',y:2018,lat:38.63,lon:-90.19,d:'The smallest national park — a 630-foot stainless steel arch.'},
+ {n:'Glacier',s:'Montana',y:1910,lat:48.76,lon:-113.79,d:'Going-to-the-Sun Road, turquoise lakes, mountain goats.'},
+ {n:'Grand Canyon',s:'Arizona',y:1919,lat:36.06,lon:-112.14,d:'A mile deep, with rock layers going back nearly two billion years.'},
+ {n:'Grand Teton',s:'Wyoming',y:1929,lat:43.79,lon:-110.68,d:'Jagged peaks that rise straight up out of the valley floor.'},
+ {n:'Great Basin',s:'Nevada',y:1986,lat:38.98,lon:-114.30,d:'Bristlecone pines thousands of years old, and superb star-gazing.'},
+ {n:'Great Sand Dunes',s:'Colorado',y:2004,lat:37.73,lon:-105.51,d:'The tallest sand dunes in North America, right against the mountains.'},
+ {n:'Great Smoky Mountains',s:'Tennessee & N. Carolina',y:1934,lat:35.61,lon:-83.49,d:'The most visited park — misty ridges and synchronous fireflies.'},
+ {n:'Guadalupe Mountains',s:'Texas',y:1966,lat:31.92,lon:-104.87,d:'An ancient fossil reef, and the highest point in Texas.'},
+ {n:'Hot Springs',s:'Arkansas',y:1921,lat:34.52,lon:-93.04,d:'Thermal springs and historic bathhouses in the middle of a town.'},
+ {n:'Indiana Dunes',s:'Indiana',y:2019,lat:41.65,lon:-87.06,d:'Sand dunes along Lake Michigan with remarkable plant variety.'},
+ {n:'Isle Royale',isle:1,s:'Michigan',y:1940,lat:48.10,lon:-88.55,d:'A wilderness island of wolves and moose; closed all winter.'},
+ {n:'Joshua Tree',s:'California',y:1994,lat:33.87,lon:-115.90,d:'Spiky Joshua trees and piles of climbable boulders.'},
+ {n:'Kings Canyon',s:'California',y:1940,lat:36.89,lon:-118.56,d:'One of the deepest canyons in the country, plus giant sequoias.'},
+ {n:'Lassen Volcanic',s:'California',y:1916,lat:40.49,lon:-121.51,d:'Boiling mud pots, steam vents and all four types of volcano.'},
+ {n:'Mammoth Cave',s:'Kentucky',y:1941,lat:37.19,lon:-86.10,d:'The longest known cave system on earth — over 400 miles mapped.'},
+ {n:'Mesa Verde',s:'Colorado',y:1906,lat:37.23,lon:-108.46,d:'Cliff dwellings built by Ancestral Puebloans around 1200.'},
+ {n:'Mount Rainier',s:'Washington',y:1899,lat:46.88,lon:-121.73,d:'An active volcano wrapped in glaciers, ringed by wildflower meadows.'},
+ {n:'New River Gorge',s:'West Virginia',y:2020,lat:37.92,lon:-81.06,d:'The newest national park — whitewater and a huge steel arch bridge.'},
+ {n:'North Cascades',s:'Washington',y:1968,lat:48.77,lon:-121.30,d:'Over 300 glaciers — more than anywhere else outside Alaska.'},
+ {n:'Olympic',s:'Washington',y:1938,lat:47.80,lon:-123.60,d:'Rainforest, glaciated peaks and wild coast in one park.'},
+ {n:'Petrified Forest',s:'Arizona',y:1962,lat:35.07,lon:-109.78,d:'Fallen trees turned to colourful stone over 200 million years.'},
+ {n:'Pinnacles',s:'California',y:2013,lat:36.49,lon:-121.18,d:'Volcanic spires, talus caves, and California condors overhead.'},
+ {n:'Redwood',s:'California',y:1968,lat:41.21,lon:-124.00,d:'The tallest trees on earth, some over 350 feet.'},
+ {n:'Rocky Mountain',s:'Colorado',y:1915,lat:40.34,lon:-105.68,d:'Trail Ridge Road climbs above 12,000 feet; elk everywhere in autumn.'},
+ {n:'Saguaro',s:'Arizona',y:1994,lat:32.25,lon:-110.50,d:'Forests of the giant saguaro cactus, which can live 200 years.'},
+ {n:'Sequoia',s:'California',y:1890,lat:36.49,lon:-118.57,d:'Home of General Sherman, the largest tree on earth by volume.'},
+ {n:'Shenandoah',s:'Virginia',y:1935,lat:38.53,lon:-78.35,d:'Skyline Drive along the Blue Ridge, waterfalls and black bears.'},
+ {n:'Theodore Roosevelt',s:'North Dakota',y:1978,lat:46.98,lon:-103.54,d:'Badlands and free-roaming bison, in the president\\u2019s old ranch country.'},
+ {n:'Voyageurs',s:'Minnesota',y:1975,lat:48.50,lon:-92.88,d:'A park you explore by boat, with northern lights in winter.'},
+ {n:'White Sands',s:'New Mexico',y:2019,lat:32.78,lon:-106.17,d:'Rolling dunes of white gypsum sand you can sled down.'},
+ {n:'Wind Cave',s:'South Dakota',y:1903,lat:43.57,lon:-103.48,d:'A cave famous for delicate honeycomb "boxwork" formations.'},
+ {n:'Yellowstone',s:'Wyoming, Montana & Idaho',y:1872,lat:44.60,lon:-110.50,d:'The world\\u2019s first national park — geysers, hot springs and bison.'},
+ {n:'Yosemite',s:'California',y:1890,lat:37.83,lon:-119.54,d:'El Capitan, Half Dome and some of the tallest waterfalls anywhere.'},
+ {n:'Zion',s:'Utah',y:1919,lat:37.30,lon:-113.03,d:'Red cliffs over a narrow canyon you can wade right up.'},
+ // Alaska
+ {n:'Denali',s:'Alaska',y:1917,lat:63.11,lon:-151.19,ak:1,d:'Around the highest peak in North America, 20,310 feet.'},
+ {n:'Gates of the Arctic',s:'Alaska',y:1980,lat:67.78,lon:-153.30,ak:1,d:'No roads and no trails at all — entirely above the Arctic Circle.'},
+ {n:'Glacier Bay',s:'Alaska',y:1980,lat:58.50,lon:-137.00,ak:1,d:'Tidewater glaciers calving into the sea, and humpback whales.'},
+ {n:'Katmai',s:'Alaska',y:1980,lat:58.60,lon:-155.00,ak:1,d:'Brown bears catching salmon at Brooks Falls.'},
+ {n:'Kenai Fjords',s:'Alaska',y:1980,lat:59.92,lon:-149.65,ak:1,d:'An icefield feeding nearly 40 glaciers down to the ocean.'},
+ {n:'Kobuk Valley',s:'Alaska',y:1980,lat:67.33,lon:-159.12,ak:1,d:'Arctic sand dunes, and half a million caribou crossing each year.'},
+ {n:'Lake Clark',s:'Alaska',y:1980,lat:60.97,lon:-153.42,ak:1,d:'Volcanoes, turquoise lakes and bears — reachable only by plane.'},
+ {n:'Wrangell–St. Elias',s:'Alaska',y:1980,lat:61.00,lon:-142.00,ak:1,d:'The largest national park — bigger than Switzerland.'},
+ // Hawaii
+ {n:'Haleakalā',s:'Hawaii',y:1961,lat:20.72,lon:-156.17,hi:1,d:'A vast volcanic summit above the clouds, famous for sunrise.'},
+ {n:'Hawaiʻi Volcanoes',s:'Hawaii',y:1916,lat:19.42,lon:-155.29,hi:1,d:'Kīlauea and Mauna Loa — land being created in front of you.'},
+ // Far offshore
+ {n:'Virgin Islands',s:'U.S. Virgin Islands',y:1956,lat:18.34,lon:-64.73,far:1,d:'White sand beaches and coral reefs covering most of St. John.'},
+ {n:'National Park of American Samoa',s:'American Samoa',y:1988,lat:-14.26,lon:-170.68,far:1,d:'Rainforest and reef in the South Pacific — the most remote park.'},
+];
+
+// ── Build the SVG ───────────────────────────────────────────
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('map');
+const el = (t, a) => { const n = document.createElementNS(NS, t); for (const k in a) n.setAttribute(k, a[k]); return n; };
+const pathOf = (pts, fn) => pts.map((p, i) => (i ? 'L' : 'M') + fn(p[0], p[1]).map(v => v.toFixed(1)).join(' ')).join('') + 'Z';
+
+svg.appendChild(el('path', { d: pathOf(US, proj), class: 'land' }));
+LAKES.forEach(l => svg.appendChild(el('path', { d: pathOf(l, proj), class: 'lake' })));
+
+// Real islands, so their dots have land underneath instead of floating.
+// [lat, lon, rx, ry, rotation]
+[[48.05,-88.75,9,3,-38],   // Isle Royale, in Lake Superior
+ [24.63,-82.87,2.6,2,0],   // Dry Tortugas, ~70mi west of Key West
+ [34.02,-119.75,4,2,-8],   // Santa Cruz / Santa Rosa
+ [33.95,-119.05,2.4,1.6,0],// Anacapa
+ [33.25,-119.5,2.4,1.8,0], // San Nicolas area
+].forEach(([la, lo, rx, ry, rot]) => {
+  const [x, y] = proj(la, lo);
+  svg.appendChild(el('ellipse', { cx: x, cy: y, rx, ry, class: 'land',
+    transform: `rotate(${rot} ${x.toFixed(1)} ${y.toFixed(1)})` }));
+});
+
+svg.appendChild(el('rect', { x: AK_BOX.x, y: AK_BOX.y, width: AK_BOX.w, height: AK_BOX.h, rx: 10, class: 'inset-box' }));
+svg.appendChild(el('path', { d: pathOf(AK, projAK), class: 'land' }));
+const akl = el('text', { x: AK_BOX.x + 10, y: AK_BOX.y + 18, class: 'inset-label' }); akl.textContent = 'ALASKA'; svg.appendChild(akl);
+
+svg.appendChild(el('rect', { x: HI_BOX.x, y: HI_BOX.y, width: HI_BOX.w, height: HI_BOX.h, rx: 10, class: 'inset-box' }));
+HI_ISLES.forEach(([la, lo, rx, ry]) => {
+  const [x, y] = projHI(la, lo);
+  svg.appendChild(el('ellipse', { cx: x, cy: y, rx, ry, class: 'land' }));
+});
+const hil = el('text', { x: HI_BOX.x + 10, y: HI_BOX.y + 18, class: 'inset-label' }); hil.textContent = "HAWAI'I"; svg.appendChild(hil);
+
+const visited = new Set();
+try { (JSON.parse(localStorage.getItem('parksVisited') || '[]') || []).forEach(n => visited.add(n)); } catch(e){}
+
+const nodes = new Map();
+PARKS.filter(p => !p.far).forEach(p => {
+  const [x, y] = p.ak ? projAK(p.lat, p.lon) : p.hi ? projHI(p.lat, p.lon) : proj(p.lat, p.lon);
+  const g = el('g', { class: 'pk' });
+  g.appendChild(el('circle', { cx: x, cy: y, r: 6 }));
+  g.addEventListener('click', () => select(p));
+  g.addEventListener('mouseenter', e => showTip(e, p.n));
+  g.addEventListener('mousemove', e => showTip(e, p.n));
+  g.addEventListener('mouseleave', hideTip);
+  svg.appendChild(g);
+  nodes.set(p.n, g);
+});
+
+const tip = document.getElementById('tip');
+function showTip(e, t){ tip.textContent = t; tip.style.display = 'block';
+  tip.style.left = (e.clientX + 13) + 'px'; tip.style.top = (e.clientY - 8) + 'px'; }
+function hideTip(){ tip.style.display = 'none'; }
+
+// ── Selection / visited ─────────────────────────────────────
+let sel = null;
+
+function save(){ try { localStorage.setItem('parksVisited', JSON.stringify([...visited])); } catch(e){} }
+
+function paint(){
+  nodes.forEach((g, n) => {
+    g.classList.toggle('seen', visited.has(n));
+    g.classList.toggle('sel', !!sel && sel.n === n);
+  });
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('seen', visited.has(c.dataset.n)));
+  document.getElementById('counter').textContent = `${visited.size} / ${PARKS.length} visited`;
+}
+
+function select(p){
+  sel = p;
+  const been = visited.has(p.n);
+  document.getElementById('info').innerHTML = `
+    <h2>${p.n}</h2>
+    <div class="meta">${p.s} · est. ${p.y}</div>
+    <div class="desc">${p.d}</div>
+    <button class="seenbtn ${been ? '' : 'off'}" id="toggle">
+      ${been ? '✅ Been there!' : '○ Mark as visited'}
+    </button>`;
+  document.getElementById('toggle').onclick = () => {
+    if (visited.has(p.n)) visited.delete(p.n); else visited.add(p.n);
+    save(); select(p);
+  };
+  paint();
+}
+
+const farBox = document.getElementById('far');
+PARKS.filter(p => p.far).forEach(p => {
+  const c = document.createElement('span');
+  c.className = 'chip'; c.textContent = p.n; c.dataset.n = p.n;
+  c.onclick = () => select(p);
+  farBox.appendChild(c);
+});
+
+// ── Search ──────────────────────────────────────────────────
+document.getElementById('search').oninput = e => {
+  const q = e.target.value.trim().toLowerCase();
+  nodes.forEach((g, n) => {
+    const p = PARKS.find(x => x.n === n);
+    const hit = !q || n.toLowerCase().includes(q) || p.s.toLowerCase().includes(q);
+    g.classList.toggle('dim', !hit);
+  });
+};
+
+document.getElementById('clear').onclick = () => {
+  if (!visited.size) return;
+  visited.clear(); save(); if (sel) select(sel); else paint();
+};
+
+paint();
+window.__p = { PARKS, proj, projAK, projHI, visited, select, nodes, MAPW, MAPH, OX, OY };
+</script>
+</body>
+</html>
